@@ -25,6 +25,7 @@ For one stage, load the matching local skill:
 | Existing May Shorts example maintenance | `short-form-video` |
 | New motion-graphics video from a brief | `make-a-video` |
 | Website-inspired compositions | `website-to-hyperframes` |
+| Learn how a feature in a shipped app or site works | `rea` |
 | Full raw-video edit | `edit-video` |
 | Silence removal | `cut-silences` |
 | Retakes, false starts, or stutters | `cut-mistakes` |

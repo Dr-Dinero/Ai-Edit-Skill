@@ -127,6 +127,9 @@ npm run publish-media -- renders/final.mp4 --dry-run        # shows the key and 
 After upload the script requests the public URL and checks that it serves the same
 number of bytes, so a bucket without public access fails before anything is scheduled.
 Anything uploaded is public to whoever has the link; upload only approved media.
+Behind an HTTPS proxy, run Node with `NODE_USE_ENV_PROXY=1` (Node 22.21+) so its
+built-in fetch uses the proxy. If the machine cannot reach the public host at all, the
+upload still succeeds and the record says `verified: null`; check the link in a browser.
 
 ## Other optional tools referenced by bundled skills
 

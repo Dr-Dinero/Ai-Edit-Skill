@@ -68,10 +68,11 @@ async function main() {
   const put = await fetch(url, { method: 'PUT', headers, body });
   if (!put.ok) throw new Error(`Upload failed: ${put.status} ${(await put.text()).slice(0, 300)}`);
   // Metricool fetches the media itself, so prove the public URL serves the same bytes.
-  const head = await fetch(publicUrl, { method: 'HEAD' });
-  const size = +head.headers.get('content-length');
-  const ok = head.ok && size === statSync(file).size;
-  const record = { file: resolve(file), key, publicUrl, bytes: body.length, contentType: type, uploadedAt: new Date().toISOString(), verified: ok, acceptRanges: head.headers.get('accept-ranges') };
+  // A sandbox may block the public host even when the bucket is fine; report that as unchecked.
+  const head = await fetch(publicUrl, { method: 'HEAD' }).catch(e => ({ unreachable: e.cause?.message || e.message }));
+  const size = +head.headers?.get('content-length');
+  const ok = head.unreachable ? null : head.ok && size === statSync(file).size;
+  const record = { file: resolve(file), key, publicUrl, bytes: body.length, contentType: type, uploadedAt: new Date().toISOString(), verified: ok, acceptRanges: head.headers?.get('accept-ranges') ?? null };
   if (opt('job')) {
     const log = resolve(opt('root') || process.env.COUNCIL_ROOT || join(dirname(fileURLToPath(import.meta.url)), '../video-projects'), opt('job'), 'council/package/media.json');
     mkdirSync(dirname(log), { recursive: true });
@@ -79,7 +80,8 @@ async function main() {
     writeFileSync(log, JSON.stringify([...list.filter(m => m.key !== key), record], null, 2) + '\n');
   }
   console.log(JSON.stringify(record, null, 2));
-  if (!ok) { console.error(`The public URL did not serve the file (HTTP ${head.status}, ${size} bytes). Check the bucket's public access.`); process.exitCode = 1; }
+  if (ok === null) console.error(`Uploaded, but this machine could not reach the public URL (${head.unreachable}). Open it in a browser before scheduling.`);
+  else if (!ok) { console.error(`The public URL did not serve the file (HTTP ${head.status}, ${size} bytes). Check the bucket's public access.`); process.exitCode = 1; }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch(e => { console.error(e.message); process.exit(1); });

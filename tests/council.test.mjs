@@ -82,3 +82,31 @@ test('a job moves through the council and only the owner approves it', () => {
   assert.equal(state.posts[0].ref, 'https://example.com/p/1');
   assert.match(council(dir, 'board').stdout, /garden\s+posted/);
 });
+
+test('thumbnail plans keep text away from the face and the duration badge', async () => {
+  const { plan, buildHtml, overlapsBadge, FORMATS } = await import('../.agents/skills/packager/scripts/render-thumbnails.mjs');
+  const { sampleTimes, mmss } = await import('../.agents/skills/packager/scripts/pick-stills.mjs');
+  const left = plan({ text: 'IS THAT GOD?', style: 'big_claim', design: { focus: [0.3, 0.3] } });
+  assert.equal(left.side, 'right');
+  assert.equal(left.key, 'GOD?');
+  assert.equal(plan({ text: 'WHO TOLD YOU', style: 'podcast', still2: {} }).side, 'bottom');
+  assert.equal(plan({ text: 'NOT THE SOIL' }, 'vertical').float > 0, true);
+  for (const side of ['left', 'right', 'bottom', 'top']) {
+    const { box } = plan({ text: 'A B', design: { text_side: side } }), f = FORMATS.wide;
+    assert.equal(overlapsBadge({ x: box.x * f.w, y: box.y * f.h, w: box.w * f.w, h: box.h * f.h }, f), false, side);
+  }
+  const html = buildHtml({ text: 'Not the <soil>', style: 'big_claim', design: { key_word: 'soil' } }, { still: join(root, 'x.jpg') });
+  assert.match(html, /Not the <span class="key">&lt;soil&gt;<\/span>/);
+  assert.doesNotMatch(html, /<soil>/);
+  const times = sampleTimes(100, 4);
+  assert.deepEqual(times, [14.75, 38.25, 61.75, 85.25]);
+  assert.equal(mmss(85.25), '1:25');
+});
+
+test('packaging checks fail renders whose text does not fit', () => {
+  const pkg = example();
+  pkg.thumbnails[0].layout = { wide: { fits: false, overlapsBadge: true } };
+  const { errors } = checkPackage(pkg);
+  assert.ok(errors.some(e => e.includes('does not fit')));
+  assert.ok(errors.some(e => e.includes('duration badge')));
+});

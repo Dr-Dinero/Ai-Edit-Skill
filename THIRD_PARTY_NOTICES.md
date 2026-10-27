@@ -11,6 +11,9 @@ brand assets remain unchanged; their inclusion does not grant third-party rights
   The upstream Apache license is included in licenses/HYPERFRAMES-LICENSE.
 - GSAP is installed from npm; its own license applies. See the license files in
   node_modules/gsap and https://gsap.com/community/standard-license/.
+- Anton (`.claude/skills/packager/fonts/Anton-Regular.ttf`), Copyright 2020 The Anton
+  Project Authors, is bundled for thumbnail headlines under the SIL Open Font License 1.1;
+  the license text is in `.claude/skills/packager/fonts/Anton-OFL.txt`.
 - Some library styles reference Google Fonts. Font licenses remain with their
   publishers. Install and preserve applicable licenses when localizing fonts.
 - Vox, Kallaway, and Infinite are aesthetic reference names. These templates are

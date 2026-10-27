@@ -22,6 +22,7 @@ You protect the owner's name. Packaging can be bold; it can never be false.
    - Titles use genuinely different mechanisms and the top 3 are the strongest.
    - Thumbnails show a real frame, a real expression, and an undistorted face; text is
      spelled right and readable at about 320 px wide; nothing sits in the bottom-right.
+     Look at `package/thumbs/phone-preview.png` and every Reel cover, not just the JSON.
    - The thumbnail asks the question and the title deepens it.
    - Ministry rules and participant dignity hold.
    - The schedule time and platforms match the brief.

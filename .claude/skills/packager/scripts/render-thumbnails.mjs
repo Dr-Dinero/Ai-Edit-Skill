@@ -51,9 +51,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 export function buildHtml(concept, { format = 'wide', still, still2, font = FONT } = {}) {
   const f = FORMATS[format], p = plan(concept, format);
-  const grade = { warm: 'contrast(1.12) saturate(1.14) brightness(1.03) sepia(0.06)', cool: 'contrast(1.12) saturate(1.06) brightness(1.02) hue-rotate(-6deg)', neutral: 'contrast(1.1) saturate(1.1)' }[concept.design?.grade || 'warm'];
+  const grade = { warm: 'contrast(1.2) saturate(1.22) brightness(1.04) sepia(0.07)', cool: 'contrast(1.2) saturate(1.12) brightness(1.03) hue-rotate(-6deg)', neutral: 'contrast(1.17) saturate(1.16)' }[concept.design?.grade || 'warm'];
   const dir = { right: 'to left', left: 'to right', bottom: 'to top', top: 'to bottom' }[p.side];
-  const darken = concept.design?.darken ?? (p.style === 'clean' ? 0.45 : 0.8);
+  const darken = concept.design?.darken ?? (p.style === 'clean' ? 0.5 : 0.88);
   const headline = p.words.map(w => w.toUpperCase() === p.key || w.toUpperCase().replace(/[^A-Z0-9$%]/g, '') === p.key.replace(/[^A-Z0-9$%]/g, '') ? `<span class="key">${esc(w)}</span>` : esc(w)).join(' ');
   const shots = p.split
     ? [{ src: still, focus: p.focus, half: 0 }, { src: still2, focus: concept.design?.focus2 || [0.5, 0.4], half: 1 }]
@@ -69,11 +69,11 @@ html, body { width: ${f.w}px; height: ${f.h}px; overflow: hidden; background: #1
 .float img { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%); mask-image: linear-gradient(to bottom, transparent 0, #000 14%); }
 .muted img { filter: grayscale(0.6) brightness(0.78) contrast(1.05); }
 .shade { position: absolute; inset: 0; background: linear-gradient(${dir}, rgba(0,0,0,${darken}) 0%, rgba(0,0,0,${darken * 0.55}) 35%, rgba(0,0,0,0) 62%); }
-.vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.42) 100%); }
+.vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.55) 100%); }
 #text { position: absolute; left: ${p.box.x * f.w}px; top: ${p.box.y * f.h}px; width: ${p.box.w * f.w}px; height: ${p.box.h * f.h}px;
   display: flex; align-items: ${p.side === 'bottom' ? 'flex-end' : p.side === 'top' ? 'flex-start' : 'center'}; justify-content: ${align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start'}; }
 #text h1 { font-family: Anton, Impact, sans-serif; font-weight: 400; color: #fff; text-transform: uppercase; line-height: 0.98; letter-spacing: 0.5px;
-  text-align: ${align}; overflow-wrap: normal; -webkit-text-stroke: 2px rgba(0,0,0,0.35); text-shadow: 0 4px 18px rgba(0,0,0,0.65), 0 2px 3px rgba(0,0,0,0.8); }
+  text-align: ${align}; overflow-wrap: normal; -webkit-text-stroke: 6px #000; paint-order: stroke fill; text-shadow: 0 6px 22px rgba(0,0,0,0.7), 0 3px 0 rgba(0,0,0,0.9); }
 .key { color: ${KEY_COLOR}; }
 </style></head><body>
 ${p.float ? `<img class="bg" src="${pathToFileURL(still).href}">` : ''}

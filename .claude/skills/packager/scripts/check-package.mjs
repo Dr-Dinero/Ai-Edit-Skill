@@ -63,6 +63,10 @@ export function checkPackage(pkg, { transcript = null, faith = false } = {}) {
     if (th?.pairs_with && !pair) warnings.push(`${tag} pairs with a title that is not in the list.`);
     if (pair && text && norm(pair.title).includes(norm(text))) errors.push(`${tag} repeats words from its title; the thumbnail should ask the question the title deepens.`);
     if (!th?.still?.time && !th?.still?.file) warnings.push(`${tag} names no real still (time or file) from the footage.`);
+    for (const [format, lay] of Object.entries(th?.layout || {})) {
+      if (lay?.fits === false) errors.push(`${tag} ${format} render: text does not fit in 2 readable lines.`);
+      if (lay?.overlapsBadge) errors.push(`${tag} ${format} render: text reaches the bottom-right duration badge.`);
+    }
   });
 
   const story = pkg.story || {};

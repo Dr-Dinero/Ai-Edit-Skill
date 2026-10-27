@@ -14,6 +14,8 @@
     "new-video": "node scripts/new-video.mjs",
     "council": "node scripts/council.mjs",
     "check:package": "node .claude/skills/packager/scripts/check-package.mjs",
+    "stills": "node .claude/skills/packager/scripts/pick-stills.mjs",
+    "thumbs": "node .claude/skills/packager/scripts/render-thumbnails.mjs",
     "demo": "node scripts/new-video.mjs demo",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check-kit.mjs",

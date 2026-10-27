@@ -34,10 +34,17 @@ Write into `package/package.json` (shape: `examples/council/package.example.json
 
 ## 3. Thumbnails
 
-Follow `references/thumbnails.md`: pick real stills, write 3-4 concepts with different
-angles, and render each as a HyperFrames still from the real frame (1280x720, plus
-1080x1920 covers for Reels). Save renders in `package/thumbs/` and record each
-concept's `file` and `still`. Never let a generative model redraw a real face.
+Follow `references/thumbnails.md`:
+
+```bash
+npm run stills -- <final render> --out video-projects/<slug>/council/package/stills
+npm run thumbs -- video-projects/<slug>/council/package/package.json
+```
+
+Pick real stills from the contact sheet, write 3-4 concepts with different angles and a
+`design` block each, render them, and look at every render plus `phone-preview.png`.
+Re-render until faces, crops, and text read cleanly. Never let a generative model
+redraw a real face.
 
 ## 4. Check and hand off
 

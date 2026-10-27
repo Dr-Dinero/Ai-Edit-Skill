@@ -2,7 +2,8 @@
 
 Stillshot chose good stills, then asked an image model to repaint the whole frame.
 That drifted faces, invented details, and misspelled text. The council keeps the
-real frame and only designs on top of it.
+real frame and designs on top of it with `scripts/pick-stills.mjs` and
+`scripts/render-thumbnails.mjs`.
 
 ## Concepts (fill `thumbnails` in package.json)
 
@@ -23,37 +24,69 @@ human moment). Every concept is about the primary subject and core story; nothin
   blur, where the text sits.
 - `emotion`: the real one in the frame. Never fake tears, terror, or screaming.
 - `pairs_with`: the exact title it pairs with.
-- `still`: `{ "time": "m:ss", "file": "package/stills/..." }`, the real frame used.
+- `still`: `{ "time": "m:ss", "file": "stills/still-07.jpg" }`, the real frame used (paths
+  are relative to package.json).
 
 ## Picking stills
 
-Extract 12-16 candidate frames across the video (`ffmpeg -ss <t> -i <video> -frames:v 1`),
-then rank the best 4: a clearly visible face with eyes open and a genuine readable
-expression; moments that show the story (two people interacting, a meaningful object);
-sharp, well lit, with room on one side for text. Include a clear front-facing frame of
-each main person.
+```bash
+npm run stills -- <final render or source> --count 16 --out video-projects/<slug>/council/package/stills
+```
+
+This writes `still-01.jpg`..., `stills.json` (each still's m:ss), and `sheet.jpg`, a
+4-wide contact sheet. Look at the sheet and rank the best 4: a clearly visible face with
+eyes open and a genuine readable expression; moments that show the story (two people
+interacting, a meaningful object); sharp, well lit, with room on one side for text.
+Include a clear front-facing frame of each main person. For a moment the sampler
+missed, grab it directly: `ffmpeg -ss <t> -i <video> -frames:v 1 -q:v 2 <file>.jpg`.
 
 ## Layouts
 
 - clean: the real moment, only color graded; optional 1-3 word headline in empty space.
-- big_claim: hero on one side at 40-55% width; headline and at most one meaningful
-  object on the other.
+- big_claim: hero on one side at 40-55% width; headline on the other.
 - story: the real encounter, both people, the person whose story it is dominant.
 - mystery: the real object or physical situation as anchor, the person beside it.
-- reaction: hero large with the real expression; what they react to on the other side.
-- before_after: only for a change the video really shows; before side muted.
-- podcast: both people at the outer edges, head and shoulders, facing inward; one topic
-  visual in the center; two-line headline across the bottom, never over faces.
-- versus: two contrasting ideas side by side, the person on one side.
+- reaction: hero large with the real expression; the headline beside them.
+- before_after: two stills side by side for a change the video really shows; the
+  before side is muted.
+- podcast and versus: two stills side by side, one person each, headline across the bottom.
 
-## Building it
+## Rendering
 
-Render each concept as a 1280x720 HyperFrames still (and 1080x1920 for a Reel cover)
-from the real frame: crop, grade, background darken or blur, subject cutout only when
-edges stay clean, and live text. Text: one bold sans (Anton or Montserrat ExtraBold),
-all caps, at most 2 lines, white with the key word in #FFD54A, off faces and the key
-object, clear of the bottom-right corner (video length badge). No arrows by default, no
-flames, glowing eyes, fake effects, logos, borders, or extra text. Ministry: no
+Give each concept its real still and a `design` block, then render:
+
+```json
+"still": { "time": "0:42", "file": "stills/still-07.jpg" },
+"still2": { "time": "3:10", "file": "stills/still-12.jpg" },
+"design": { "focus": [0.48, 0.3], "focus2": [0.5, 0.32], "zoom": 1.25,
+            "text_side": "right", "key_word": "GOD?", "grade": "warm", "darken": 0.8 }
+```
+
+- `focus`: where the hero's face is in the still, as fractions of width and height
+  (look at the still; 0.5, 0.3 is a centered talking head). `focus2` is for `still2`.
+- `text_side`: left, right, top, or bottom. Defaults to the side away from the face.
+- `key_word`: the one word drawn in #FFD54A; defaults to the last word.
+- `zoom`: 1 keeps the frame; 1.2-1.4 tightens on the face. `grade`: warm, cool, neutral.
+
+```bash
+npm run thumbs -- video-projects/<slug>/council/package/package.json [--only 1,3]
+```
+
+For each concept this writes a 1280x720 thumbnail and a 1080x1920 Reel cover into
+`package/thumbs/`, plus `phone-preview.png` with every thumbnail at phone size. It
+records `file`, `cover`, and `layout` (font size, line count, fit, badge overlap) on
+the concept; check-package fails a concept whose text does not fit or hits the
+duration badge.
+
+What the renderer does: crop and position the real frame, grade it, darken the text
+side, and set the headline in the bundled Anton font (all caps, at most 2 lines,
+white with one key word, auto-sized, clear of the bottom-right duration badge). Reel
+covers put the frame over a blurred copy of itself so the headline sits above the
+face. It never redraws a face, adds arrows, flames, glowing eyes, logos, or borders.
+
+Look at every render and at `phone-preview.png` before handing off: the face is not
+cut at the top, the expression is real, the text is spelled right and readable at
+phone size. Adjust `focus`, `zoom`, or `text_side` and render again. Ministry: no
 miracle glow, no horror effects, dignified grief and disability, no intimate imagery.
 
 Generative tools (Higgsfield, gpt-image) are allowed only for background or symbolic

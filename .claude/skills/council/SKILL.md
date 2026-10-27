@@ -78,6 +78,10 @@ folder (in a cloud project, the project's shared files) instead of `video-projec
   Drive folder named "Council Inbox"). For each video not yet in `INTAKE.json` beside
   the jobs, download it, run `council new <slug> --footage <file>`, and record the file
   id, name, and slug in `INTAKE.json`. Never delete or move the owner's originals.
+  The Drive connector only returns small files inline; fetch footage with
+  `NODE_USE_ENV_PROXY=1 npm run fetch-drive -- <file-id> <out> --bytes <size>`, which needs
+  the folder shared as "Anyone with the link: Viewer" and `drive.usercontent.google.com`
+  allowed in the environment's network settings.
 - **Worker** (hourly): run `council due`. For each entry, load that role's skill and do
   the work: analyst reads that are due, and any job parked at a role's stage. A job at
   `approval`, or flagged NEEDS OWNER, gets one message to the owner with the preview

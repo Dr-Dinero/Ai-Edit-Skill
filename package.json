@@ -17,6 +17,7 @@
     "stills": "node .claude/skills/packager/scripts/pick-stills.mjs",
     "thumbs": "node .claude/skills/packager/scripts/render-thumbnails.mjs",
     "publish-media": "node scripts/publish-media.mjs",
+    "fetch-drive": "node scripts/fetch-drive.mjs",
     "demo": "node scripts/new-video.mjs demo",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check-kit.mjs",

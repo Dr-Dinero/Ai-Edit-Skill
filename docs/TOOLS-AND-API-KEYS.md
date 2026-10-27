@@ -131,6 +131,22 @@ Behind an HTTPS proxy, run Node with `NODE_USE_ENV_PROXY=1` (Node 22.21+) so its
 built-in fetch uses the proxy. If the machine cannot reach the public host at all, the
 upload still succeeds and the record says `verified: null`; check the link in a browser.
 
+## Footage from Google Drive
+
+The council's intake reads an upload folder on Google Drive. The Drive connector lists
+files but only returns small ones inline, so footage is downloaded directly with
+`scripts/fetch-drive.mjs`. Share the folder as "Anyone with the link: Viewer", and in a
+cloud environment allow `drive.google.com` and `drive.usercontent.google.com`.
+
+```bash
+NODE_USE_ENV_PROXY=1 npm run fetch-drive -- <file-id> video-projects/my-video/source/raw.mp4 --bytes <size>
+```
+
+`--bytes` takes the size Drive lists and fails on a short download. A private file
+returns Drive's sign-in page instead of video, which the script reports as an error.
+Anyone holding a file's link can watch it; use a service account instead if that is
+not acceptable.
+
 ## Other optional tools referenced by bundled skills
 
 These are workflow options, not a claim that every example used them:

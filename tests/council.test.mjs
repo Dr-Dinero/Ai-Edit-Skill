@@ -135,3 +135,8 @@ test('media uploads are signed exactly as AWS documents and keyed per job', asyn
   assert.deepEqual(config({}).missing.length, 5);
   assert.equal(config({ R2_ACCOUNT_ID: 'abc', MEDIA_BUCKET: 'b', MEDIA_ACCESS_KEY_ID: 'k', MEDIA_SECRET_ACCESS_KEY: 's', MEDIA_PUBLIC_BASE_URL: 'https://m.example.com/' }).cfg.endpoint, 'https://abc.r2.cloudflarestorage.com');
 });
+
+test('fetch-drive builds a confirmed download link', async () => {
+  const { downloadUrl } = await import('../scripts/fetch-drive.mjs');
+  assert.equal(downloadUrl('abc_1-2'), 'https://drive.usercontent.google.com/download?id=abc_1-2&export=download&confirm=t');
+});

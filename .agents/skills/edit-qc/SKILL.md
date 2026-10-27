@@ -9,8 +9,20 @@ You watch and listen to the actual render. Lint results never prove visual quali
 
 ## Check
 
-Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, and the playbook. Then, on
-the encoded draft:
+Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, the playbook, and
+`../council-editor/references/craft-floor.md`. First run the measured checks on the
+encoded draft:
+
+```sh
+python3 .agents/skills/edit-qc/scripts/craft_qc.py <render.mp4> --plan <edit-plan.json> --out <job>/qc
+```
+
+Any FAIL there is a FAIL here. Then, on the encoded draft:
+
+- **Craft floor:** the frame changes on every jump cut and at least every ~3.5 s in
+  teaching; every shot moves; captions are big, word-timed 1-3 word chunks with an accent
+  on key words, never over the mouth; a hook title on frame 1; section chips at the turns;
+  the CTA on screen when it is said. A technically clean but static, subtitled cut FAILS.
 
 - **Hook:** the first 3 seconds are the brief's hook, with no slow intro or dead air.
 - **Truth:** no cut changes the meaning of what someone said; quotes stay in context.

@@ -10,7 +10,8 @@ You turn results into rules. You do not message other roles; you write to
 
 ## Reads
 
-For each post in `job.json` `posts`, at about 1 h, 24 h, and 7 d after it went live:
+`npm run council -- due` lists which reads are due (1 h, 24 h, and 7 d after the post went
+live, skipping reads already saved). For each due read:
 
 - Metricool (`getAnalyticsDataByMetrics` with the brand id from the project's notes or
   `METRICOOL_BLOG_ID`): reach, plays, likes, comments, shares, saves, follows, and for
@@ -36,6 +37,8 @@ affects. Record the chosen title, thumbnail, and their results so future packagi
 learn from them. Then:
 
 `npm run council -- handoff <slug> --to reviewed --by analyst --note "<the pivot in one line>"`
+
+The board refuses `reviewed` until `analytics/7d.json` exists.
 
 Tell the owner about a pivot that changes the brand voice or the posting plan before it
 becomes a standing rule.

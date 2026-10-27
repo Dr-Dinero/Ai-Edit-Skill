@@ -64,6 +64,7 @@ function gate(job, to) {
   }
   if (from === 'approval' && to === 'scheduled' && !job.approval && !job.autopost) problems.push('Only the owner approves. Record their words with: council approve <slug> --quote "...".');
   if (from === 'scheduled' && to === 'posted' && !opt('post')) problems.push('Pass --post <url or Metricool post id>.');
+  if (from === 'posted' && to === 'reviewed' && !existsSync(join(d, 'analytics/7d.json'))) problems.push('The 7-day read (analytics/7d.json) comes before the review.');
   return problems;
 }
 
@@ -104,6 +105,16 @@ function create(slug) {
   console.log(`Council job ${slug} is at brief, held by virality-director. Folder: ${jobDir(slug)}`);
 }
 
+// Analyst checkpoints after a post goes live, in hours.
+export const READS = { '1h': 1, '24h': 24, '7d': 168 };
+export function dueReads(job, at = Date.now(), dir = jobDir(job.slug)) {
+  const live = job.posts?.[0]?.at;
+  if (!live || !['posted', 'reviewed'].includes(job.stage)) return [];
+  return Object.entries(READS)
+    .filter(([name, hours]) => at >= Date.parse(live) + hours * 36e5 && !existsSync(join(dir, 'analytics', `${name}.json`)))
+    .map(([name]) => name);
+}
+
 function board() {
   const rows = existsSync(jobsRoot) ? readdirSync(jobsRoot).filter(s => existsSync(jobFile(s))).map(s => JSON.parse(readFileSync(jobFile(s), 'utf8'))) : [];
   if (flag('json')) return console.log(JSON.stringify(rows, null, 2));
@@ -120,6 +131,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (cmd === 'new') create(slug);
   else if (cmd === 'board') board();
   else if (cmd === 'status') console.log(JSON.stringify(load(slug), null, 2));
+  else if (cmd === 'due') {
+    // Work waiting on a role right now: analyst reads that are due, and jobs parked at a stage.
+    const jobs = existsSync(jobsRoot) ? readdirSync(jobsRoot).filter(s => existsSync(jobFile(s))).map(s => JSON.parse(readFileSync(jobFile(s), 'utf8'))) : [];
+    const due = jobs.flatMap(j => {
+      const reads = dueReads(j);
+      if (reads.length) return [{ slug: j.slug, role: 'analyst', reads }];
+      if (['posted', 'reviewed'].includes(j.stage)) return [];
+      return [{ slug: j.slug, role: j.holder, stage: j.stage, needsOwner: j.needsOwner || null }];
+    });
+    console.log(JSON.stringify(due, null, 2));
+  }
   else if (cmd === 'handoff') {
     const job = load(slug), to = opt('to'), by = opt('by');
     if (!to || !by) die('Usage: council handoff <slug> --to <stage> --by <role> [--note "..."]');
@@ -142,5 +164,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       move(job, 'scheduled', 'owner', `approved: "${quote}"`); save(job);
       console.log(`${slug}: approved. The packager may schedule it now.`);
     }
-  } else die('Usage: council <new|board|status|handoff|approve> ... (see .claude/skills/council/SKILL.md)');
+  } else die('Usage: council <new|board|status|due|handoff|approve> ... (see .claude/skills/council/SKILL.md)');
 }

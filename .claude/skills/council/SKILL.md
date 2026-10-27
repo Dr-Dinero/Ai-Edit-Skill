@@ -36,6 +36,7 @@ video project (override with `--root` or `COUNCIL_ROOT`).
 npm run council -- new <slug> --footage <path> [--platforms youtube,instagram] [--autopost "<owner's words>"]
 npm run council -- board                       # every job, newest first
 npm run council -- status <slug>               # full job.json
+npm run council -- due                         # JSON of what each role owes right now
 npm run council -- handoff <slug> --to <stage> --by <role> --note "<one line>"
 npm run council -- approve <slug> --quote "<owner's exact words>"
 npm run council -- approve <slug> --quote "<owner's words>" --changes "<what>" --to edit|package
@@ -66,6 +67,21 @@ At the approval stage, show the owner the finished render, the top thumbnail, th
 three titles, the caption, and the planned time and platforms, all in one message.
 Then wait. When the owner says go, run `approve` with their words. When they ask for
 changes, run `approve --changes` and send it back to the role that owns the change.
+
+## Running on its own
+
+Two scheduled routines make the council autonomous. Each starts a fresh session in this
+repo, so keep jobs where every run can see them: set `COUNCIL_ROOT` to a shared, durable
+folder (in a cloud project, the project's shared files) instead of `video-projects/`.
+
+- **Intake** (every 15-30 minutes): list the owner's upload folder (for example a Google
+  Drive folder named "Council Inbox"). For each video not yet in `INTAKE.json` beside
+  the jobs, download it, run `council new <slug> --footage <file>`, and record the file
+  id, name, and slug in `INTAKE.json`. Never delete or move the owner's originals.
+- **Worker** (hourly): run `council due`. For each entry, load that role's skill and do
+  the work: analyst reads that are due, and any job parked at a role's stage. A job at
+  `approval`, or flagged NEEDS OWNER, gets one message to the owner with the preview
+  and nothing more until they answer. The worker never records an approval.
 
 ## Splitting into threads
 

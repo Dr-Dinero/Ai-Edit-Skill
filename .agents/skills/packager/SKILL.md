@@ -59,8 +59,10 @@ npm run council -- handoff <slug> --to packaging-qc --by packager --note "<lead 
 The job reaches `scheduled` only through the owner's recorded approval or standing
 autopost permission in `job.json`. Then:
 
-1. Media must be a public URL. Upload to the configured host (for example a Cloudflare
-   R2 bucket) and confirm the URL plays before scheduling.
+1. Media must be a public URL. Upload the approved render, thumbnail, and Reel cover:
+   `npm run publish-media -- <file> --job <slug>`. It records each URL in
+   `package/media.json` and fails if the public URL does not serve the file. If hosting
+   is not configured, stop and tell the owner what `docs/TOOLS-AND-API-KEYS.md` needs.
 2. Pick the time with `getBestTimeToPostByNetwork` unless the owner named one, in the
    brand's timezone from `getBrandSettings`.
 3. Schedule with Metricool `createScheduledPost`: YouTube gets the lead title,

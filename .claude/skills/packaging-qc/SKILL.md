@@ -24,6 +24,8 @@ You protect the owner's name. Packaging can be bold; it can never be false.
      spelled right and readable at about 320 px wide; nothing sits in the bottom-right.
      Look at `package/thumbs/phone-preview.png` and every Reel cover, not just the JSON.
    - The thumbnail asks the question and the title deepens it.
+   - A Short or Reel (`video_format: "short"`) has vertical covers only; a wide
+     thumbnail on one is a fail.
    - Ministry rules and participant dignity hold.
    - The schedule time and platforms match the brief.
 3. Write `qc/packaging-qc.md` with `Verdict: PASS` or `Verdict: FAIL`, the evidence,

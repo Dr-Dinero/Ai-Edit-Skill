@@ -73,7 +73,9 @@ npm run thumbs -- video-projects/<slug>/council/package/package.json [--only 1,3
 ```
 
 For each concept this writes a 1280x720 thumbnail and a 1080x1920 Reel cover into
-`package/thumbs/`, plus `phone-preview.png` with every thumbnail at phone size. It
+`package/thumbs/`, plus `phone-preview.png` with every thumbnail at phone size. A
+package with `"video_format": "short"` (Shorts and Reels) gets the vertical cover only,
+and its preview shows covers. It
 records `file`, `cover`, and `layout` (font size, line count, fit, badge overlap) on
 the concept; check-package fails a concept whose text does not fit or hits the
 duration badge.

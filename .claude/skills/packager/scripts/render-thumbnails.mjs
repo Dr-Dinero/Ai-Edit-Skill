@@ -4,6 +4,7 @@
 // Usage: render-thumbnails.mjs <package.json> [--only 1,3] [--out <dir>] [--no-vertical]
 // Writes <n>-<angle>.png (1280x720), <n>-<angle>-vertical.png (1080x1920), phone-preview.png,
 // and records file, cover, and layout checks on each concept in package.json.
+// A package with "video_format": "short" (Shorts, Reels) gets vertical covers only.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -17,6 +18,12 @@ export const FORMATS = {
   wide: { w: 1280, h: 720, maxFont: 190, minFont: 84 },
   vertical: { w: 1080, h: 1920, maxFont: 230, minFont: 110 },
 };
+// Shorts and Reels show a vertical cover, so a wide thumbnail for them is wasted work.
+export function formatsFor(pkg, { noVertical = false } = {}) {
+  if (pkg.video_format === 'short') return ['vertical'];
+  return noVertical ? ['wide'] : ['wide', 'vertical'];
+}
+
 // YouTube draws the duration over the bottom-right corner of every thumbnail.
 export const BADGE = { x: 0.78, y: 0.8 };
 
@@ -122,7 +129,7 @@ async function main() {
       const still = c.still?.file && resolve(base, c.still.file), still2 = c.still2?.file && resolve(base, c.still2.file);
       if (!still || !existsSync(still)) { problems.push(`Thumbnail ${i + 1}: still.file is missing or not found; run pick-stills first.`); continue; }
       if (SPLIT.has(c.style) && still2 && !existsSync(still2)) { problems.push(`Thumbnail ${i + 1}: still2.file not found.`); continue; }
-      const formats = args.includes('--no-vertical') ? ['wide'] : ['wide', 'vertical'];
+      const formats = formatsFor(pkg, { noVertical: args.includes('--no-vertical') });
       c.layout = {};
       for (const format of formats) {
         const f = FORMATS[format], name = `${slugAngle(c, i)}${format === 'vertical' ? '-vertical' : ''}`;
@@ -140,13 +147,16 @@ async function main() {
         const rel = `${out.startsWith(base) ? out.slice(base.length + 1).replaceAll('\\', '/') : out}/${name}.png`;
         if (format === 'wide') c.file = rel; else c.cover = rel;
       }
+      if (!formats.includes('wide')) delete c.file;
       rendered.push({ i, c });
     }
     if (rendered.length) {
-      const cards = rendered.map(({ i, c }) => `<figure><img src="${pathToFileURL(join(out, `${slugAngle(c, i)}.png`)).href}"><figcaption>${i + 1}. ${esc(c.angle || '')}: ${esc(c.pairs_with || '')}</figcaption></figure>`).join('');
-      const sheet = join(out, '.phone-preview.html');
-      writeFileSync(sheet, `<!doctype html><meta charset="utf-8"><style>body{margin:0;padding:16px;background:#0f0f0f;font:13px/1.3 Inter,Arial,sans-serif;color:#f1f1f1;display:flex;flex-wrap:wrap;gap:16px;width:${2 * 320 + 48}px}figure{width:320px;margin:0}img{width:320px;height:180px;border-radius:8px;display:block}figcaption{margin-top:6px;color:#aaa}</style>${cards}`);
-      const page = await browser.newPage({ viewport: { width: 2 * 320 + 48, height: 200 } });
+      // Preview what the feed shows: wide thumbnails, or vertical covers for a short.
+      const short = pkg.video_format === 'short', [cw, ch, cols] = short ? [180, 320, 4] : [320, 180, 2];
+      const cards = rendered.map(({ i, c }) => `<figure><img src="${pathToFileURL(join(out, `${slugAngle(c, i)}${short ? '-vertical' : ''}.png`)).href}"><figcaption>${i + 1}. ${esc(c.angle || '')}: ${esc(c.pairs_with || '')}</figcaption></figure>`).join('');
+      const sheet = join(out, '.phone-preview.html'), width = cols * cw + (cols + 1) * 16;
+      writeFileSync(sheet, `<!doctype html><meta charset="utf-8"><style>body{margin:0;padding:16px;background:#0f0f0f;font:13px/1.3 Inter,Arial,sans-serif;color:#f1f1f1;display:flex;flex-wrap:wrap;gap:16px;width:${width - 32}px}figure{width:${cw}px;margin:0}img{width:${cw}px;height:${ch}px;border-radius:8px;display:block;object-fit:cover}figcaption{margin-top:6px;color:#aaa}</style>${cards}`);
+      const page = await browser.newPage({ viewport: { width, height: 200 } });
       await page.goto(pathToFileURL(sheet).href);
       await page.waitForLoadState('load');
       await page.screenshot({ path: join(out, 'phone-preview.png'), fullPage: true });

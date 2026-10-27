@@ -41,6 +41,11 @@ npm run stills -- <final render> --out video-projects/<slug>/council/package/sti
 npm run thumbs -- video-projects/<slug>/council/package/package.json
 ```
 
+Set `video_format` in package.json first. A vertical render or anything posted as a
+Short or Reel is `"short"` and gets vertical covers only, never a wide thumbnail. A
+horizontal YouTube video is `"long"` and gets a wide thumbnail plus a vertical cover
+for its Reel cut.
+
 Pick real stills from the contact sheet, write 3-4 concepts with different angles and a
 `design` block each, render them, and look at every render plus `phone-preview.png`.
 Re-render until faces, crops, and text read cleanly. Never let a generative model

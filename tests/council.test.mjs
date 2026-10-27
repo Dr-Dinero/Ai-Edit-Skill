@@ -140,3 +140,13 @@ test('fetch-drive builds a confirmed download link', async () => {
   const { downloadUrl } = await import('../scripts/fetch-drive.mjs');
   assert.equal(downloadUrl('abc_1-2'), 'https://drive.usercontent.google.com/download?id=abc_1-2&export=download&confirm=t');
 });
+
+test('shorts get vertical covers only', async () => {
+  const { formatsFor } = await import('../.agents/skills/packager/scripts/render-thumbnails.mjs');
+  assert.deepEqual(formatsFor({ video_format: 'short' }), ['vertical']);
+  assert.deepEqual(formatsFor({ video_format: 'short' }, { noVertical: true }), ['vertical']);
+  assert.deepEqual(formatsFor({ video_format: 'long' }), ['wide', 'vertical']);
+  const pkg = { ...example(), video_format: 'short' };
+  pkg.thumbnails = pkg.thumbnails.map(t => ({ ...t, file: 'thumbs/1.png', layout: { wide: { fits: true } } }));
+  assert.match(checkPackage(pkg, { transcript }).errors.join('\n'), /vertical cover only/);
+});

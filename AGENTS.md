@@ -26,6 +26,9 @@ For one stage, load the matching local skill:
 | New motion-graphics video from a brief | `make-a-video` |
 | Website-inspired compositions | `website-to-hyperframes` |
 | Full raw-video edit | `edit-video` |
+| Autonomous content council: brief, edit, QC, package, approve, post, analyze | `council` |
+| Council roles | `virality-director`, `council-editor`, `edit-qc`, `packager`, `packaging-qc`, `analyst` |
+| Titles, tags, SEO, captions, and thumbnails | `packager` |
 | Silence removal | `cut-silences` |
 | Retakes, false starts, or stutters | `cut-mistakes` |
 | Narrative arc, persistent world, and visual callbacks | `video-storytelling` |

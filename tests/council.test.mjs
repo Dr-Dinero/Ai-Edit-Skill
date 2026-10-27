@@ -1,0 +1,84 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { resolve, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { checkPackage } from '../.agents/skills/packager/scripts/check-package.mjs';
+const root = resolve(import.meta.dirname, '..');
+const example = () => JSON.parse(readFileSync(join(root, 'examples/council/package.example.json')));
+const transcript = 'We we build a small garden. Plants need light.';
+function council(dir, ...args) { return spawnSync(process.execPath, [join(root, 'scripts/council.mjs'), ...args, '--root', dir], { encoding: 'utf8', cwd: root }); }
+const fill = (path, text) => writeFileSync(path, text);
+
+test('example package passes the packaging checks against its transcript', () => {
+  const report = checkPackage(example(), { transcript, faith: true });
+  assert.deepEqual(report.errors, []);
+  assert.equal(report.ok, true);
+});
+
+test('packaging checks catch invented quotes, weak truth, long tags, and repeated thumbnail text', () => {
+  const pkg = example();
+  pkg.story.hook_moments.push({ time: '0:07', quote: 'This changed my life forever', why: 'made up' });
+  pkg.titles[1].truth = 3;
+  pkg.titles[2].title = 'You Won\'t Believe My Garden';
+  pkg.tags = Array.from({ length: 40 }, (_, i) => `garden tag number ${i}`);
+  pkg.thumbnails[0].text = 'It Wasn\'t the Soil';
+  pkg.thumbnails[0].pairs_with = pkg.titles[0].title;
+  const { ok, errors } = checkPackage(pkg, { transcript });
+  assert.equal(ok, false);
+  for (const needle of ['not in the transcript', 'truth 3', 'banned lazy pattern', 'under 500', 'repeats words']) {
+    assert.ok(errors.some(e => e.includes(needle)), `expected an error about ${needle}: ${errors.join(' | ')}`);
+  }
+});
+
+test('ministry rules reject generic miracle leads', () => {
+  const pkg = example();
+  pkg.titles[0].title = 'Healed After One Prayer';
+  assert.ok(checkPackage(pkg, { faith: true }).errors.some(e => e.includes('miracle/healing')));
+  assert.equal(checkPackage(pkg).errors.some(e => e.includes('miracle/healing')), false);
+});
+
+test('a job moves through the council and only the owner approves it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'council-test-'));
+  assert.equal(council(dir, 'new', 'garden').status, 0);
+  const job = join(dir, 'garden/council');
+  assert.ok(existsSync(join(dir, 'PLAYBOOK.md')));
+  assert.equal(existsSync(join(job, 'PLAYBOOK.md')), false);
+
+  let r = council(dir, 'handoff', 'garden', '--to', 'edit', '--by', 'virality-director');
+  assert.notEqual(r.status, 0); assert.match(r.stderr, /brief\.md/);
+  fill(join(job, 'brief.md'), '# Creative brief\nAngle: light, not soil.\n');
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'edit', '--by', 'editor').status, 1, 'wrong role');
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'edit', '--by', 'virality-director').status, 0);
+
+  fill(join(job, 'edit/NOTES.md'), 'Draft: renders/garden-v1.mp4\n');
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'edit-qc', '--by', 'editor').status, 0);
+  fill(join(job, 'qc/edit-qc.md'), 'Verdict: FAIL\n1. 0:02 pop\n');
+  assert.notEqual(council(dir, 'handoff', 'garden', '--to', 'package', '--by', 'edit-qc').status, 0);
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'edit', '--by', 'edit-qc').status, 0);
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'edit-qc', '--by', 'editor').status, 0);
+  fill(join(job, 'qc/edit-qc.md'), 'Verdict: PASS\n');
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'package', '--by', 'edit-qc').status, 0);
+
+  fill(join(job, 'package/package.json'), JSON.stringify(example()));
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'packaging-qc', '--by', 'packager').status, 0);
+  fill(join(job, 'qc/packaging-qc.md'), 'Verdict: PASS\n');
+  r = council(dir, 'handoff', 'garden', '--to', 'approval', '--by', 'packaging-qc');
+  assert.notEqual(r.status, 0); assert.match(r.stderr, /check-package/);
+  fill(join(job, 'qc/check-package.json'), JSON.stringify(checkPackage(example(), { transcript })));
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'approval', '--by', 'packaging-qc').status, 0);
+
+  assert.notEqual(council(dir, 'handoff', 'garden', '--to', 'scheduled', '--by', 'owner').status, 0);
+  assert.notEqual(council(dir, 'approve', 'garden').status, 0);
+  assert.equal(council(dir, 'approve', 'garden', '--quote', 'looks fire, post it').status, 0);
+  assert.notEqual(council(dir, 'handoff', 'garden', '--to', 'posted', '--by', 'packager').status, 0);
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'posted', '--by', 'packager', '--post', 'https://example.com/p/1').status, 0);
+
+  const state = JSON.parse(readFileSync(join(job, 'job.json')));
+  assert.equal(state.stage, 'posted');
+  assert.equal(state.holder, 'analyst');
+  assert.equal(state.approval.quote, 'looks fire, post it');
+  assert.equal(state.posts[0].ref, 'https://example.com/p/1');
+  assert.match(council(dir, 'board').stdout, /garden\s+posted/);
+});

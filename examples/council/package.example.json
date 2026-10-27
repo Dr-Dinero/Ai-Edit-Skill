@@ -1,0 +1,30 @@
+{
+  "platforms": ["youtube", "instagram"],
+  "story": {
+    "format": "talking head",
+    "primary_subject": "the host",
+    "biggest_result": "The garden produced its first tomatoes after the plants were moved into light.",
+    "core_story": "The host's seedlings failed in the shade, and moving them into sunlight fixed it.",
+    "why_click": "Most beginners blame the soil when the real problem is light.",
+    "strongest_angle": "A beginner garden failed for a reason most people never check. Anyone who has watched a plant wilt wants to know what fixed it.",
+    "is_compilation": false,
+    "side_details": ["the brand of pots"],
+    "hook_moments": [
+      { "time": "0:01", "quote": "We build a small garden.", "why": "Sets up a simple promise fast" },
+      { "time": "0:05", "quote": "Plants need light.", "why": "The one fix in four words" }
+    ]
+  },
+  "titles": [
+    { "title": "My Garden Was Dying... It Wasn't the Soil", "angle": "story gap", "why": "Names the usual suspect, then denies it", "truth": 5 },
+    { "title": "The One Thing Beginner Gardens Get Wrong", "angle": "warning", "why": "Speaks to a mistake viewers fear making", "truth": 4 },
+    { "title": "Why Your Seedlings Keep Dying (Simple Fix)", "angle": "search intent", "why": "Matches a common search with a promise", "truth": 4 }
+  ],
+  "description": "Why do beginner gardens fail even with good soil?\n\nI build a small garden and find the one thing my plants were missing.\n\nWhat would you have checked first? Tell me in the comments.\n\nLike and share this with someone starting their first garden.",
+  "chapters": [],
+  "tags": ["beginner garden", "why are my seedlings dying", "plants need light", "small garden", "gardening for beginners"],
+  "hashtags": ["#gardening", "#beginnergarden", "#plants"],
+  "ig_caption": "It wasn't the soil. What would you have checked first? #gardening #plants",
+  "thumbnails": [
+    { "angle": "CONFLICT", "text": "NOT THE SOIL", "style": "big_claim", "scene": "The hero holds a wilted seedling on the left at half width, looking at it with real concern. The background is darkened so the plant reads. Text sits on the right in empty space.", "emotion": "concern", "pairs_with": "Why Your Seedlings Keep Dying (Simple Fix)", "still": { "time": "0:03" } }
+  ]
+}

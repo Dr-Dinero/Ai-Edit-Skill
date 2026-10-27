@@ -3,7 +3,7 @@
 // Each job lives in <root>/<slug>/council/ beside the video project it packages.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, cpSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 const kit = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const templates = join(kit, '.claude/skills/council/templates');
@@ -115,7 +115,7 @@ function board() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const slug = args[1];
   if (cmd === 'new') create(slug);
   else if (cmd === 'board') board();

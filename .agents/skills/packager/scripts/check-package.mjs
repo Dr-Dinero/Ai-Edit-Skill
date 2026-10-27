@@ -2,6 +2,7 @@
 // Deterministic packaging checks, ported from Stillshot's cleanSEO and Brand Brain rules.
 // Usage: node check-package.mjs <package.json> [--transcript <words.json>] [--faith] [--out <report.json>]
 import { readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const BANNED_TITLE = [/this changed everything/i, /changes everything/i, /^shocking\b/i, /you won'?t believe/i, /\bgoes? viral\b/i];
 const BANNED_THUMB = [/^be yourself$/i, /^my journey$/i, /^success story$/i, /^watch this!?$/i];
@@ -80,7 +81,7 @@ function transcriptText(path) {
   return (doc.words || []).filter(w => w.type !== 'spacing' && w.type !== 'audio_event').map(w => w.text).join(' ');
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2), opt = n => { const i = args.indexOf(`--${n}`); return i > -1 ? args[i + 1] : null; };
   if (!args[0] || args[0] === '--help') { console.log('Usage: check-package.mjs <package.json> [--transcript <words.json>] [--faith] [--out <report.json>]'); process.exit(args[0] ? 0 : 1); }
   const report = checkPackage(JSON.parse(readFileSync(args[0], 'utf8')), {

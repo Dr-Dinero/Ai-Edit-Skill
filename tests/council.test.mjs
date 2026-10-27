@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -109,4 +109,29 @@ test('packaging checks fail renders whose text does not fit', () => {
   const { errors } = checkPackage(pkg);
   assert.ok(errors.some(e => e.includes('does not fit')));
   assert.ok(errors.some(e => e.includes('duration badge')));
+});
+
+test('analyst reads come due at 1 hour, 24 hours, and 7 days after posting', async () => {
+  const { dueReads } = await import('../scripts/council.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'council-due-'));
+  mkdirSync(join(dir, 'analytics'));
+  const live = Date.parse('2026-10-01T12:00:00Z');
+  const job = { slug: 'x', stage: 'posted', posts: [{ at: new Date(live).toISOString() }] };
+  assert.deepEqual(dueReads(job, live + 30 * 60e3, dir), []);
+  assert.deepEqual(dueReads(job, live + 2 * 36e5, dir), ['1h']);
+  writeFileSync(join(dir, 'analytics/1h.json'), '{}');
+  assert.deepEqual(dueReads(job, live + 8 * 864e5, dir), ['24h', '7d']);
+  assert.deepEqual(dueReads({ ...job, stage: 'scheduled' }, live + 8 * 864e5, dir), []);
+});
+
+test('media uploads are signed exactly as AWS documents and keyed per job', async () => {
+  const { signRequest, mediaKey, config } = await import('../scripts/publish-media.mjs');
+  // AWS SigV4 S3 GET example (docs: "Signature Calculations for the Authorization Header").
+  const h = signRequest({ method: 'GET', url: 'https://examplebucket.s3.amazonaws.com/test.txt', headers: { range: 'bytes=0-9' },
+    payloadHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+    secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY', region: 'us-east-1', date: new Date('2013-05-24T00:00:00Z') });
+  assert.match(h.authorization, /Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41$/);
+  assert.equal(mediaKey('renders/Final Cut.MP4', { job: 'garden', date: new Date('2026-10-27T10:00:00Z') }), 'garden/2026-10-27-final-cut.mp4');
+  assert.deepEqual(config({}).missing.length, 5);
+  assert.equal(config({ R2_ACCOUNT_ID: 'abc', MEDIA_BUCKET: 'b', MEDIA_ACCESS_KEY_ID: 'k', MEDIA_SECRET_ACCESS_KEY: 's', MEDIA_PUBLIC_BASE_URL: 'https://m.example.com/' }).cfg.endpoint, 'https://abc.r2.cloudflarestorage.com');
 });

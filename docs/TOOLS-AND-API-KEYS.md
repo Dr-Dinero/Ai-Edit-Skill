@@ -105,6 +105,29 @@ aspect ratio, and framing in the final edit.
 > and current model documentation, then show me the assets you propose and expected
 > credit cost. Reuse existing footage wherever it fits.
 
+## Media hosting for posting
+
+Metricool, and most posting APIs, fetch media from a public URL. The council's
+packager uploads finished renders and thumbnails with `scripts/publish-media.mjs`,
+which signs requests itself (no SDK) and works with any S3-compatible bucket.
+Cloudflare R2 is the default because it has no egress fees:
+
+1. In the Cloudflare dashboard, enable R2 and create a bucket.
+2. In the bucket's settings, turn on public access through the r2.dev subdomain or a
+   custom domain. That address is `MEDIA_PUBLIC_BASE_URL`.
+3. Create an R2 API token with Object Read & Write on that bucket. Its access key ID
+   and secret are `MEDIA_ACCESS_KEY_ID` and `MEDIA_SECRET_ACCESS_KEY`.
+4. Put those, `MEDIA_BUCKET`, and `R2_ACCOUNT_ID` in `.env` (see `.env.example`).
+
+```bash
+npm run publish-media -- renders/final.mp4 --job my-video   # prints and records the public URL
+npm run publish-media -- renders/final.mp4 --dry-run        # shows the key and URL only
+```
+
+After upload the script requests the public URL and checks that it serves the same
+number of bytes, so a bucket without public access fails before anything is scheduled.
+Anything uploaded is public to whoever has the link; upload only approved media.
+
 ## Other optional tools referenced by bundled skills
 
 These are workflow options, not a claim that every example used them:

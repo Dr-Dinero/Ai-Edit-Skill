@@ -4,7 +4,7 @@
 Usage:  python3 craft_qc.py <render.mp4> [--plan edit-plan.json] [--out qa/]
 Writes <out>/craft-qc.md and <out>/craft-qc.json, plus hero and opening contact sheets.
 
-Checks (FAIL lines must be fixed or explained before edit QC can pass):
+Checks (FAIL lines; NOT RUN lines need the same check done another way; must be fixed or explained before edit QC can pass):
   specs      1080x1920, video and audio within one frame of each other
   loudness   -14 LUFS (+-1), true peak <= -1.0 dBTP
   opening    first spoken word by 0.5 s, the picture moves in the first 0.5 s
@@ -143,8 +143,10 @@ def main():
             sm = difflib.SequenceMatcher(a=want, b=heard, autojunk=False)
             ratio = sum(b.size for b in sm.get_matching_blocks()) / max(1, len(want))
             row('words', ratio >= 0.95, f'{ratio:.1%} of planned words heard in the render ({len(heard)} heard, {len(want)} planned)')
-        except ImportError:
-            row('words', False, 'faster-whisper not installed: pip install faster-whisper, then rerun')
+        except Exception as e:      # not installed, or the model download is blocked
+            rows.append(dict(check='words', result='NOT RUN',
+                             detail=f'speech-to-text unavailable ({type(e).__name__}); transcribe the render '
+                                    'with the job provider and compare by hand'))
 
     # contact sheets for the human pass
     ff = lambda *a: subprocess.run(['ffmpeg', '-v', 'error', '-y', *a], check=True)

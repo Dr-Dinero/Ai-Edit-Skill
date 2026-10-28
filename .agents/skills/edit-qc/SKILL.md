@@ -9,8 +9,8 @@ You watch and listen to the actual render. Lint results never prove visual quali
 
 ## Check
 
-Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, and the playbook. Then, on
-the encoded draft:
+Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, the playbook, and the
+edit-qc section of `../council/references/director-brain.md`. Then, on the encoded draft:
 
 - **Hook:** the first 3 seconds are the brief's hook, with no slow intro or dead air.
 - **Truth:** no cut changes the meaning of what someone said; quotes stay in context.
@@ -21,6 +21,10 @@ the encoded draft:
 - **Sync:** lips match audio at the start, middle, and end.
 - **Format:** resolution, aspect ratio, and duration match the brief and the platform.
 - **Payoff:** the ending lands the brief's payoff or CTA.
+- **Overlays:** exactly one CTA; no new banner or caption covers one already burned
+  in; every on-screen word spelled right.
+- **Remake:** when the brief asks for a re-edit, it is materially different from the
+  original, not a cosmetic pass.
 
 ## Report
 

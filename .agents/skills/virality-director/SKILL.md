@@ -16,6 +16,8 @@ or packages it. You own the angle; the editor and packager own the execution.
   transcription call before making it if the owner has not already approved it.
 - `video-projects/PLAYBOOK.md`, `../packager/references/house-rules.md`, and
   `docs/SHORT-FORM.md` when a Reel or Short is planned.
+- `../council/references/director-brain.md`: the universal gate and the virality-director section.
+  Name the content's energy (calm, teaching, encounter, event, promo) in the brief.
 - Optional research: vidIQ outliers, trending, and similar videos for the topic. Use them
   to choose between true angles, never to invent one.
 

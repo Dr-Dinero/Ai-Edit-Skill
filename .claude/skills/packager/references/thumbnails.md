@@ -67,6 +67,8 @@ Give each concept its real still and a `design` block, then render:
 - `text_side`: left, right, top, or bottom. Defaults to the side away from the face.
 - `key_word`: the one word drawn in #FFD54A; defaults to the last word.
 - `zoom`: 1 keeps the frame; 1.2-1.4 tightens on the face. `grade`: warm, cool, neutral.
+- `brightness`: optional lift for a dark still (1.2-1.35); cover QC fails a face darker
+  than 70/255.
 
 ```bash
 npm run thumbs -- video-projects/<slug>/council/package/package.json [--only 1,3]
@@ -82,7 +84,10 @@ What the renderer does: crop and position the real frame, grade it, darken the t
 side, and set the headline in the bundled Anton font (all caps, at most 2 lines,
 white with one key word, auto-sized, clear of the bottom-right duration badge). Reel
 covers put the frame over a blurred copy of itself so the headline sits above the
-face. It never redraws a face, adds arrows, flames, glowing eyes, logos, or borders.
+face, inside the 3:4 crop the Instagram profile grid shows (y 240-1680) and below the
+Reels header. Packaging QC runs `packaging-qc/scripts/cover_qc.py` on every cover; fix
+what it reports (usually `focus`, `brightness`, or a word repeated from the title)
+before handing off. It never redraws a face, adds arrows, flames, glowing eyes, logos, or borders.
 
 Look at every render and at `phone-preview.png` before handing off: the face is not
 cut at the top, the expression is real, the text is spelled right and readable at

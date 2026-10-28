@@ -21,7 +21,7 @@ footage -> virality-director -> editor -> edit-qc -> packager -> packaging-qc ->
 | edit | editor | `council-editor` | edit/NOTES.md names the draft render |
 | edit-qc | edit-qc | `edit-qc` | qc/edit-qc.md says PASS (on to package) or FAIL (back to edit) |
 | package | packager | `packager` | package/package.json exists |
-| packaging-qc | packaging-qc | `packaging-qc` | qc/packaging-qc.md says PASS and check-package is clean, or FAIL back |
+| packaging-qc | packaging-qc | `packaging-qc` | qc/packaging-qc.md says PASS, check-package is clean and cover QC passes, or FAIL back |
 | approval | owner | this skill | the owner's own words are recorded with `approve` |
 | scheduled | packager | `packager` | the post is live; `--post` records its URL or id |
 | posted | analyst | `analyst` | 1 h, 24 h, and 7 d reads are in analytics/ |

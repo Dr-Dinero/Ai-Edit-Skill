@@ -16,10 +16,22 @@ skills; this role adds the brief, the notes, and the handoff.
    lint, and verification.
 3. Open on the brief's hook. Keep the truth of every quote: never splice words into a
    sentence the person did not say.
-4. Render drafts into the video project's `renders/` with a new filename per round.
-5. Fill `edit/NOTES.md`: render paths, the transcript that matches the final cut, what
+4. **Clear the craft floor** in `references/craft-floor.md`. A clean cut of a static shot
+   with small subtitles is not an edit. For a one-speaker talking-head Reel or Short, write
+   `edit-spec.json` (`references/talking-head-spec.md`) and build with
+   `scripts/talking_head.py`, following the owner's packs (`references/craft-floor.md`):
+   phrase cuts in real silence, one slow push with no cut zooms, every jump cut under a
+   cutaway (the owner's Higgsfield clips first, then Storyblocks), calm word-timed captions
+   in the brand fonts and gold, a hook title, Epidemic music 18 to 22 dB under the voice,
+   and a 1 s hold and fade at the end. Look at a draft's contact sheets before the final render. Use
+   `short-form-edit` and HyperFrames instead when the cut needs screen recordings or
+   designed scenes. Skipping a floor item ("kept it simple") needs a reason in NOTES.md.
+5. Run `python3 .claude/skills/edit-qc/scripts/craft_qc.py <render> --plan <name>.plan.json --voice cache/voice.wav`
+   on the encoded render and fix every FAIL before handing off.
+6. Render drafts into the video project's `renders/` with a new filename per round.
+7. Fill `edit/NOTES.md`: render paths, the transcript that matches the final cut, what
    changed, and on fix rounds which numbered fixes you addressed.
-6. Hand off:
+8. Hand off:
    `npm run council -- handoff <slug> --to edit-qc --by editor --note "<what to watch>"`
 
 Spend paid credits (voiceover, b-roll generation, Higgsfield) only when the owner has

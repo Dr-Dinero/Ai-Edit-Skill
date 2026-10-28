@@ -15,10 +15,11 @@ corrections" with the date, and update the affected role section.
 - **Unknown**: the record does not say. Ask, or state the assumption, but never invent
   his opinion, a metric, a threshold, keyword volume, or a result.
 
-Precedence when rules disagree: the owner's instruction for this job, then Keegan's
-direct corrections below, then `../packager/references/house-rules.md`, then the
-proposed workflows here. Where this file and the house rules conflict, see "Known
-conflicts" at the end.
+This file is reference and feedback, not the rulebook. For SEO, titles, captions,
+hashtags, and posting, `../packager/references/house-rules.md` decides (owner,
+2026-10-28). Precedence: the owner's instruction for this job, then the house rules,
+then this file. Use Keegan's corrections to catch mistakes he has already flagged
+(spelling, branding, event status, likeness, duplicate CTAs, tone) and to inform taste.
 
 ## Universal gate (every role, every asset)
 
@@ -91,13 +92,13 @@ curiosity always beating search intent.
 - Titles: three distinct angles (topic-forward, curiosity grounded in content,
   outcome-led only if shown). Include required event branding such as "TSNL Legacy
   Conference panel" without losing clarity. Recommend one and say the tradeoff.
-- Description: short when the director asked for short; topic, speaker, scripture
-  only if it truly connects, one CTA. Verify every name, verse, date, and link.
+- Description: follow the house-rules structure; keep it tight, with scripture only
+  if it truly connects and one CTA. Verify every name, verse, date, and link.
 - Keywords: natural viewer phrases. Without live research, call them hypotheses; never
   cite search volumes you did not measure.
-- Captions: default is a short hook, keywords, 3-5 relevant hashtags and a comment
-  question, often first person in Apostle Daniel's voice. Use first person only when
-  the account and voice fit; otherwise TSNL third person.
+- Captions: hashtag and tag counts follow the house rules. Keegan's notes show a
+  habit of first person in Apostle Daniel's voice; use it only when the account and
+  voice fit, otherwise TSNL third person.
 - Thumbnails: real, sharp photos from the job (never AI-repainted faces); hierarchy per
   the brief; exact brand system for the event; text readable at phone size; "Upcoming"
   if the destination is not live; check mobile crop and safe zones. Bright and vivid
@@ -107,7 +108,7 @@ curiosity always beating search intent.
 ### packaging-qc
 - Fail on: unsupported claim, misspelling, wrong event branding or status, AI-looking
   or blurry likeness, unreadable phone text, duplicated CTA, dead or unavailable
-  destination, long description when short was asked, copy pasted across platforms.
+  destination, copy pasted across platforms.
 - Proposed readiness score, 0-5 each: message accuracy, audience relevance, hook and
   title, branding and likeness, delivery and playback, platform fit, CTA and function,
   story and payoff, voice, execution readiness (out of 50). 40+ ready for owner review,
@@ -147,16 +148,8 @@ their baselines, current posting schedule, approval process today, which tasks A
 do alone, and voice rules for Apostle first person versus TSNL. When he answers one,
 record it in "Documented corrections" and update the role section.
 
-## Known conflicts with house-rules.md
+## Where this differs from house-rules.md
 
-These are open until the owner or Keegan decides; until then, follow this file's
-precedence order (a direct correction beats a house default):
-
-1. **Description length.** House rules ask for a six-part description. Keegan asked for
-   "nothing super long". Use the short form when the brief says so or for panels and
-   streams; otherwise keep the house structure but trim.
-2. **Hashtags and tags.** House rules ask for 6-10 hashtags and 20-30 tags. Keegan's
-   default is 3-5 hashtags and tags only when requested. Instagram captions use 3-5;
-   YouTube keeps tags because the field exists, but they never claim to drive reach.
-3. **Energy.** House rules default to bold and urgent. Keegan: intensity matches the
-   content. Calm content gets calm packaging.
+The house rules win (owner, 2026-10-28). Keegan's notes lean toward short descriptions
+and 3-5 hashtags, and toward matching energy to the content; treat those as feedback to
+weigh, not overrides. Calm content may still get calmer wording within the house rules.

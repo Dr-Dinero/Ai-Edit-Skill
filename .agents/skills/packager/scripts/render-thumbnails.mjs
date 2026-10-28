@@ -30,8 +30,10 @@ export function plan(concept, format = 'wide') {
   const key = String(d.key_word || words.at(-1) || '').toUpperCase();
   if (format === 'vertical') {
     // A 16:9 still cannot fill 9:16 without cropping the face huge, so with a headline the frame
-    // sits at the bottom over a blurred copy of itself, leaving a clean band on top for the text.
-    return { style, split: false, zoom: 1, focus, target: [0.5, 0.42], side: 'top', box: { x: 0.07, y: 0.07, w: 0.86, h: 0.22 }, key, words, float: words.length ? 0.78 : 0 };
+    // sits low over a blurred copy of itself, leaving a clean band on top for the text. The band
+    // starts below the Reels header and inside the 3:4 profile-grid crop (y 240-1680), and the
+    // face is placed under it so the headline never sits on the hair (cover_qc checks all three).
+    return { style, split: false, zoom: 1, focus, target: [0.5, 0.56], side: 'top', box: { x: 0.07, y: 0.145, w: 0.86, h: 0.2 }, key, words, float: words.length ? 0.78 : 0 };
   }
   let side = d.text_side || (split ? 'bottom' : focus[0] < 0.5 ? 'right' : 'left');
   if (style === 'clean' && !d.text_side) side = 'top';
@@ -51,7 +53,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 export function buildHtml(concept, { format = 'wide', still, still2, font = FONT } = {}) {
   const f = FORMATS[format], p = plan(concept, format);
-  const grade = { warm: 'contrast(1.2) saturate(1.22) brightness(1.04) sepia(0.07)', cool: 'contrast(1.2) saturate(1.12) brightness(1.03) hue-rotate(-6deg)', neutral: 'contrast(1.17) saturate(1.16)' }[concept.design?.grade || 'warm'];
+  const lift = concept.design?.brightness ? ` brightness(${+concept.design.brightness})` : '';
+  const grade = { warm: 'contrast(1.2) saturate(1.22) brightness(1.04) sepia(0.07)', cool: 'contrast(1.2) saturate(1.12) brightness(1.03) hue-rotate(-6deg)', neutral: 'contrast(1.17) saturate(1.16)' }[concept.design?.grade || 'warm'] + lift;
   const dir = { right: 'to left', left: 'to right', bottom: 'to top', top: 'to bottom' }[p.side];
   const darken = concept.design?.darken ?? (p.style === 'clean' ? 0.5 : 0.88);
   const headline = p.words.map(w => w.toUpperCase() === p.key || w.toUpperCase().replace(/[^A-Z0-9$%]/g, '') === p.key.replace(/[^A-Z0-9$%]/g, '') ? `<span class="key">${esc(w)}</span>` : esc(w)).join(' ');
@@ -89,7 +92,7 @@ window.__layout = async () => {
     const sw = shot.clientWidth, iw = img.naturalWidth, ih = img.naturalHeight;
     const scale = Math.max(sw / iw, (float || 1) * H / ih) * zoom, fx = +shot.dataset.fx * iw * scale, fy = +shot.dataset.fy * ih * scale;
     const tx = document.querySelectorAll('.shot').length > 1 ? sw / 2 : target[0] * W;
-    const left = Math.min(0, Math.max(sw - iw * scale, tx - fx)), top = float ? H - ih * scale : Math.min(0, Math.max(H - ih * scale, target[1] * H - fy));
+    const left = Math.min(0, Math.max(sw - iw * scale, tx - fx)), top = float ? Math.min(0.4 * H, Math.max(H - ih * scale, target[1] * H - fy)) : Math.min(0, Math.max(H - ih * scale, target[1] * H - fy));
     img.style.width = iw * scale + 'px'; img.style.height = ih * scale + 'px'; img.style.left = left + 'px'; img.style.top = top + 'px';
   }
   const box = document.getElementById('text'), h1 = box.querySelector('h1');

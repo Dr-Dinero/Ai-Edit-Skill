@@ -2,9 +2,10 @@
 """Talking-head short editor: a one-speaker vertical recording in, a finished Reel/Short out.
 
 The editor writes the judgment (edit-spec.json); this script does the mechanics, so every
-council edit clears the same craft floor: phrase-level cuts in real silence, a framing change
-on every jump cut, punch-ins from the full-resolution source, a slow push inside every shot,
-kinetic captions, a hook title, section chips, keyword slams, sound hits, and a mastered mix.
+council edit follows the owner's packs (references/craft-floor.md): phrase-level cuts in real
+silence, one slow push carried across jump cuts (no cut zooms unless the spec allows them),
+full-frame cutaways over the joins, calm word-timed captions, a hook title, ducked music beds,
+a held and faded ending, and a mastered mix.
 
 Usage (run from the video project folder):
   python3 talking_head.py plan   edit-spec.json            -> edit-plan.json
@@ -96,6 +97,22 @@ def detect_faces(src, fps_sample=2):
     return out
 
 
+def clip_cuts(path, cache):
+    """Shot changes inside a stock or AI clip (many generated clips hold several shots).
+    Threshold 3 on a small copy: dark AI clips hide real cuts from the default threshold."""
+    key = os.path.abspath(path)
+    if key not in cache:
+        r = subprocess.run(['ffmpeg', '-v', 'info', '-i', path, '-vf', 'scale=320:-1,scdet=threshold=3',
+                            '-an', '-f', 'null', '-'], capture_output=True, text=True)
+        cache[key] = [float(x) for x in re.findall(r'lavfi\.scd\.time: ([\d.]+)', r.stderr)]
+    return cache[key]
+
+
+def clip_len(path):
+    return float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path],
+                                capture_output=True, text=True).stdout.strip() or 0)
+
+
 def plan(spec_path):
     spec = json.load(open(spec_path))
     root = os.path.dirname(os.path.abspath(spec_path))
@@ -145,7 +162,12 @@ def plan(spec_path):
             in_t = quietest(env, hop, max(out_t + 0.02, nx['start'] - head - 0.06), nx['start'] - 0.03)
             if in_t - out_t > 0.04:
                 segs.append([a, out_t]); a = in_t
-    segs.append([a, min(dur, kept[-1]['end'] + spec.get('tail', 0.45))])
+    # the ending holds about a second after the last word (stopping short of any next word), then fades
+    nxt = [w for w in words if w['start'] > kept[-1]['end']]
+    hold_to = kept[-1]['end'] + spec.get('end_hold', 1.0)
+    if nxt:
+        hold_to = min(hold_to, nxt[0]['start'] - 0.12)
+    segs.append([a, min(dur, max(kept[-1]['end'] + spec.get('tail', 0.45), hold_to))])
     # snap to whole frames, so picture and sound cut on the same instant
     fsegs = []
     for s, e in segs:
@@ -163,6 +185,10 @@ def plan(spec_path):
             acc += fb - fa
         return acc / fps
     total = sum(fb - fa for fa, fb in fsegs) / fps
+    # if the source has no room for the full hold, pad the end (music only, under the closing cutaway)
+    last_o = sum(fb - fa for fa, fb in fsegs[:-1]) / fps + (kept[-1]['end'] - fsegs[-1][0] / fps)
+    pad = round(max(0.0, spec.get('end_hold', 0) + spec.get('end_fade', 0) * 0.5 - (total - last_o)), 3) if spec.get('end_hold') else 0.0
+    total += pad
     joins = []
     acc = 0
     for fa, fb in fsegs[:-1]:
@@ -193,26 +219,49 @@ def plan(spec_path):
         cta = dict(text=spec['cta']['text'], start=t - 0.1, end=total)
     hook = dict(spec['hook'], start=0.0, end=spec['hook'].get('hold', 3.0)) if spec.get('hook') else None
 
-    # 4. shots: every join changes framing; long stretches get a punch-in at a word boundary
+    # 4. shots
     faces = detect_faces(src) if not os.path.exists(P('cache/faces.json')) else json.load(open(P('cache/faces.json')))
     os.makedirs(P('cache'), exist_ok=True)
     json.dump(faces, open(P('cache/faces.json'), 'w'))
     fa_arr = np.array(faces)
     calm_o = (to_out(calm_from) if calm_from < 1e9 else 1e9, to_out(calm_to) if calm_to < 1e9 else 1e9)
     in_calm = lambda t: calm_o[0] <= t < calm_o[1]
-    bounds = {0.0, total} | set(joins)
+    if not spec.get('cut_zooms'):
+        # one framing and one slow push-in, carried across every jump cut (a zoom that resets
+        # at a cut pops); it restarts only while a full-frame cutaway hides the speaker
+        mv = dict(base=1.04, rate=0.0025, cap=0.06); mv.update(spec.get('push', {}))
+        spans = [(out_to_src(0, fsegs, fps), out_to_src(total, fsegs, fps))]
+        keep_src = np.zeros(len(fa_arr), bool)
+        for fa_, fb_ in fsegs:
+            keep_src |= (fa_arr[:, 0] >= fa_ / fps) & (fa_arr[:, 0] <= fb_ / fps)
+        sel = fa_arr[keep_src] if len(fa_arr) else []
+        fx, fy = (float(np.median(sel[:, 1])), float(np.median(sel[:, 2]))) if len(sel) else (0.5, 0.36)
+        cover = []
+        for r in spec.get('broll', []):
+            if r.get('layout', 'full') == 'full':
+                i_, t_ = anchor(r['phrase'], r.get('after', 0))
+                st_ = max(0.0, t_ - r.get('lead', 0.12))
+                cover.append((st_, min(total, st_ + r.get('dur', 2.2))))
+        b = sorted({0.0, total} | {y for x, y in cover if 0 < y < total})
+        shots = [dict(start=round(x, 4), end=round(y, 4), size='P', zoom=mv['base'], face=[round(fx, 4), round(fy, 4)],
+                      push=mv['rate'], cap=mv['cap'], linear=True) for x, y in zip(b, b[1:]) if y - x >= 1 / fps]
+        punch_at = []
+    else:
+        shots = None
+    bounds = {0.0, total} | set(joins) if shots is None else set()
     # emphasis words and slams pull a punch-in onto the word
-    punch_at = [w['o_start'] - 0.04 for w in kept
-                if re.sub(r'[^a-z]', '', w['text'].lower()) in emph and not in_calm(w['o_start'])]
-    punch_at += [s['start'] for s in slams]
-    for t in punch_at:
-        if all(abs(t - b) > 0.9 for b in bounds):
-            bounds.add(t)
-    b = sorted(bounds)
+    if shots is None:
+        punch_at = [w['o_start'] - 0.04 for w in kept
+                    if re.sub(r'[^a-z]', '', w['text'].lower()) in emph and not in_calm(w['o_start'])]
+        punch_at += [s['start'] for s in slams]
+        for t in punch_at:
+            if all(abs(t - b) > 0.9 for b in bounds):
+                bounds.add(t)
+        b = sorted(bounds)
     max_len = spec.get('max_shot', 3.4)
     calm_max = spec.get('calm_max_shot', 7.0)
     word_edges = sorted({w['o_start'] - 0.03 for w in kept})
-    changed = True
+    changed = shots is None
     while changed:
         changed = False
         for x, y in zip(b, b[1:]):
@@ -224,10 +273,11 @@ def plan(spec_path):
                     b.append(min(cands, key=lambda e: abs(e - target)))
                     b.sort(); changed = True
                     break
-    shots, prev = [], None
+    legacy = shots is None
+    shots, prev = (shots or []), None
     cycle = ['T', 'M', 'W', 'M']
     ci = 0
-    for x, y in zip(b, b[1:]):
+    for x, y in zip(b, b[1:]) if legacy else []:
         if y - x < 1 / fps:
             continue
         if x == 0.0:
@@ -278,25 +328,46 @@ def plan(spec_path):
 
     # 6. sound cues (effects follow visible events, not every cut)
     sfx = []
-    if hook:
+    if not spec.get('sfx', False):
+        hook_sfx = None
+    if spec.get('sfx', False) and hook:
         sfx.append(dict(kind='boom', t=0.0, db=-13))
-    for s in slams:
+    for s in slams if spec.get('sfx', False) else []:
         sfx.append(dict(kind='hit', t=s['start'] + 0.07, db=-15))
-    for c in chips:
+    for c in chips if spec.get('sfx', False) else []:
         sfx.append(dict(kind='whoosh', t=c['start'] - 0.12, db=-21))
-    if calm_from < 1e9:
+    if calm_from < 1e9 and spec.get('sfx', False):
         sfx.append(dict(kind='swell', t=calm_o[0], db=-26))
-    if cta:
+    if cta and spec.get('sfx', False):
         sfx.append(dict(kind='pop', t=cta['start'] + 0.1, db=-20))
 
     # 7. b-roll cutaways and music beds, anchored to words
     broll = []
+    cc_path = P('cache/clip-cuts-v2.json')
+    cc = json.load(open(cc_path)) if os.path.exists(cc_path) else {}
     for r in spec.get('broll', []):
         i, t = anchor(r['phrase'], r.get('after', 0))
         st = max(0.0, t - r.get('lead', 0.12))
+        # a cutaway must not contain the clip's own shot change: that reads as a double cut
+        d_ = r.get('dur', 2.2); cin = r.get('in', 0.0)
+        inside = [c for c in clip_cuts(P(r['file']), cc) if cin + 0.05 < c < cin + d_ + 0.05]
+        if inside:
+            c0 = inside[0]
+            later = [c for c in clip_cuts(P(r['file']), cc) if c > c0 + 0.05]
+            room_after = (later[0] if later else clip_len(P(r['file']))) - c0
+            if c0 - d_ - 0.1 >= 0 and c0 - cin < room_after:
+                new_in = round(c0 - d_ - 0.1, 2)
+            elif room_after >= d_ + 0.1:
+                new_in = round(c0 + 0.1, 2)
+            else:
+                new_in = round(max(0.0, c0 - d_ - 0.1), 2)
+            print(f"note: {os.path.basename(r['file'])} has a shot change at {c0:.2f}s inside {cin:.2f}-{cin + d_:.2f}; "
+                  f"using in={new_in}")
+            r = dict(r, **{'in': new_in})
         broll.append(dict(file=P(r['file']), start=round(st, 4), end=round(min(total, st + r.get('dur', 2.2)), 4),
                           src_in=r.get('in', 0.0), layout=r.get('layout', 'full'), push=r.get('push', 0.06),
-                          x=r.get('x', 0.5), y=r.get('y', 0.5)))
+                          x=r.get('x', 0.5), y=r.get('y', 0.5), fade=r.get('fade', 0.0), gamma=r.get('gamma', 1.0)))
+    json.dump(cc, open(cc_path, 'w'))
     music = []
     for m in spec.get('music', []):
         st = 0.0 if m.get('from', 'start') == 'start' else anchor(m['from'])[1] - m.get('lead', 0.3)
@@ -305,7 +376,7 @@ def plan(spec_path):
                           under=m.get('under', 12), fade=m.get('fade', 0.6)))
 
     planned = dict(source=src, fps=fps, total=round(total, 4), segments=fsegs, joins=joins, broll=broll, music=music,
-                   shots=shots, captions=caps, slams=slams, chips=chips, cta=cta, hook=hook, sfx=sfx,
+                   end_fade=spec.get('end_fade', 1.0), pad=pad, grain=spec.get('grain', 0), shots=shots, captions=caps, slams=slams, chips=chips, cta=cta, hook=hook, sfx=sfx,
                    emphasis=sorted(emph), look=spec.get('look', {}), name=spec.get('name', 'edit'), grade=spec.get('grade', True),
                    words=[dict(t=w['text'], s=round(w['o_start'], 3), e=round(w['o_end'], 3)) for w in kept])
     outp = P(f"{spec.get('name', 'edit')}.plan.json")
@@ -341,14 +412,18 @@ def ass_color(hexrgb, alpha=0):
 
 def clean(t):
     t = t.replace('--', '').replace('"', '').replace('“', '').replace('”', '')
-    return re.sub(r'[.,;:]+$', '', t).upper()
+    return re.sub(r'[.,;:]+$', '', t)
 
 
 def build_ass(p, path, look):
-    gold, white = ass_color(look['accent']), ass_color('#FFFFFF')
+    gold, white = ass_color(look['accent']), ass_color(look.get('text', '#FFFFFF'))
     black = ass_color('#000000')
     font = look['font']
+    tfont = look.get('title_font', font)
     cap_y = look['caption_y']
+    calm_look = look.get('motion', 'calm') == 'calm'
+    case = (lambda t: t) if look.get('case') == 'as-spoken' else (lambda t: t.upper())
+    up = lambda t: t if look.get('case') == 'as-spoken' else t.upper()
     hdr = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: {OUT_W}
@@ -358,9 +433,10 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Cap,{font},{look['caption_px']},{white},{white},{black},{ass_color('#000000', 0x60)},-1,0,0,0,100,100,1,0,1,7,4,5,60,60,0,1
-Style: Title,{font},84,{white},{white},{black},{ass_color('#000000', 0x50)},-1,0,0,0,100,100,1,0,1,7,5,5,60,60,0,1
-Style: Big,{font},132,{gold},{gold},{black},{ass_color('#000000', 0x50)},-1,0,0,0,100,100,1,0,1,9,6,5,60,60,0,1
+Style: Cap,{font},{look['caption_px']},{white},{white},{black},{ass_color('#000000', 0x60)},-1,0,0,0,100,100,1,0,1,{look.get('outline', 7)},{look.get('shadow', 4)},5,60,60,0,1
+Style: Title,{tfont},{look.get('title_px', 84)},{white},{white},{black},{ass_color('#000000', 0x50)},-1,0,0,0,100,100,{look.get('title_spacing', 1)},0,1,{look.get('outline', 7)},5,5,60,60,0,1
+Style: Big,{tfont},{look.get('big_px', 132)},{gold},{gold},{black},{ass_color('#000000', 0x50)},-1,0,0,0,100,100,1,0,1,{look.get('outline', 9)},6,5,60,60,0,1
+Style: Rule,{font},10,{gold},{gold},{gold},{gold},0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
 Style: Chip,{font},60,{white},{white},{ass_color('#0B0B0F', 0x30)},{ass_color('#000000', 0x80)},-1,0,0,0,100,100,4,0,3,18,0,5,60,60,0,1
 Style: Slam,{font},190,{gold},{gold},{black},{ass_color('#000000', 0x40)},-1,0,0,0,100,100,2,0,1,11,7,5,40,40,0,1
 Style: Box,{font},10,{black},{black},{black},{black},0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
@@ -384,24 +460,39 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     b = x
         if b - a < 0.08:
             continue
-        parts = []
+        parts, lit = [], False
         for w in c['words']:
-            t = clean(w['t'])
+            t = case(clean(w['t']))
             key = re.sub(r'[^a-z]', '', w['t'].lower())
-            parts.append(f'{{\\c{gold}}}{t}{{\\c{white}}}' if key in emph else t)
+            if key in emph and not (calm_look and lit):      # calm look: one accent word per line
+                parts.append(f'{{\\c{gold}}}{t}{{\\c{white}}}'); lit = True
+            else:
+                parts.append(t)
         txt = ' '.join(parts)
         on_split = any(r['layout'] != 'full' and a < r['end'] and b > r['start'] for r in p.get('broll') or [])
         y_cap = BROLL_TOP_H if on_split else cap_y
-        anim = '{\\fad(110,0)\\blur0.6}' if c['calm'] else '{\\fscx82\\fscy82\\t(0,90,\\fscx104\\fscy104)\\t(90,150,\\fscx100\\fscy100)}'
-        add(5, a, b, 'Cap', f'{{\\pos(540,{y_cap})}}{anim}{txt}')
-    if p['hook']:
+        if calm_look:      # fade, soften and rise a few pixels: no bounce
+            add(5, a, b, 'Cap', f'{{\\move(540,{y_cap + 10},540,{y_cap},0,180)\\fad(140,90)\\blur3\\t(0,180,\\blur0.6)}}{txt}')
+        else:
+            anim = '{\\fad(110,0)\\blur0.6}' if c['calm'] else '{\\fscx82\\fscy82\\t(0,90,\\fscx104\\fscy104)\\t(90,150,\\fscx100\\fscy100)}'
+            add(5, a, b, 'Cap', f'{{\\pos(540,{y_cap})}}{anim}{txt}')
+    if p['hook'] and calm_look:
+        h, y = p['hook'], look['title_y']
+        add(6, h['start'], h['end'], 'Title', f"{{\\move(540,{y + 14},540,{y},0,450)\\fad(300,400)}}{h['line1']}")
+        add(6, h['start'] + 0.15, h['end'], 'Rule', f"{{\\p1\\pos(450,{y + 52})\\fad(300,400)}}m 0 0 l 180 0 180 4 0 4")
+        add(6, h['start'] + 0.25, h['end'], 'Big', f"{{\\move(540,{y + 128},540,{y + 114},0,450)\\fad(300,400)}}{h['line2']}")
+    elif p['hook']:
         h = p['hook']
         add(6, h['start'], h['end'], 'Title', f"{{\\pos(540,{look['title_y']})\\fad(0,180)}}{h['line1']}")
         add(6, h['start'], h['end'], 'Big', f"{{\\pos(540,{look['title_y'] + 118})\\fad(0,180)}}{h['line2']}")
     for c in p['chips']:
         add(6, c['start'], c['end'], 'Chip',
             f"{{\\move(540,{look['chip_y'] - 40},540,{look['chip_y']},0,220)\\fad(200,250)}}{c['text']}")
-    if p['cta']:
+    if p['cta'] and calm_look:
+        c, y = p['cta'], look['cta_y']
+        add(6, c['start'], c['end'], 'Title', f"{{\\move(540,{y + 12},540,{y},0,400)\\fs{int(look.get('title_px', 84) * 0.6)}\\fad(300,0)}}Comment")
+        add(6, c['start'] + 0.2, c['end'], 'Big', f"{{\\move(540,{y + 110},540,{y + 98},0,450)\\fs{int(look.get('big_px', 132) * 0.72)}\\fad(350,0)}}{c['text']}")
+    elif p['cta']:
         c = p['cta']
         add(6, c['start'], c['end'], 'Chip', f"{{\\pos(540,{look['cta_y']})\\fad(200,0)}}COMMENT")
         add(6, c['start'] + 0.15, c['end'], 'Big',
@@ -487,7 +578,7 @@ def build_audio(p, path):
         x[:fade] *= ramp[:, None]; x[-fade:] *= ramp[::-1][:, None]
         pieces.append(x)
     voice = np.concatenate(pieces)
-    n_total = int(round(sum(fb - fa for fa, fb in p['segments']) / fps * SR))
+    n_total = int(round((sum(fb - fa for fa, fb in p['segments']) / fps + p.get('pad', 0)) * SR))
     voice = np.pad(voice, ((0, max(0, n_total - len(voice))), (0, 0)))[:n_total]
     # level the voice so effect levels mean something (speech RMS near -20 dBFS before master)
     env, hop = voice_env(voice)
@@ -518,7 +609,8 @@ def build_audio(p, path):
         at = max(0, at)
         end = min(len(mix), at + len(s))
         mix[at:end] += s[:end - at]
-    mix[-int(SR * 0.1):] *= np.linspace(1, 0, int(SR * 0.1))[:, None]
+    ef = int(SR * max(0.1, p.get('end_fade', 0.1)))
+    mix[-ef:] *= np.linspace(1, 0, ef)[:, None]
     tmp = path + '.pre.wav'
     write_wav(tmp, mix)
     # two-pass loudness: -14 LUFS; aim TP at -2.0 so the AAC encode stays under -1.5 dBTP
@@ -558,7 +650,7 @@ def open_broll(b, fps):
     w, h = (OUT_W, OUT_H) if b['layout'] == 'full' else (OUT_W, BROLL_TOP_H)
     pw, ph = int(w * (1 + b['push'])) // 2 * 2, int(h * (1 + b['push'])) // 2 * 2
     vf = (f'fps={fps:.6f},scale={pw}:{ph}:force_original_aspect_ratio=increase,crop={pw}:{ph}:(iw-{pw})*{b.get("x", 0.5)}:(ih-{ph})*{b.get("y", 0.5)},'
-          f'eq=contrast=1.04:saturation=0.9:brightness=-0.03,format=rgb24')
+          f'eq=contrast=1.04:saturation=0.9:brightness=-0.03:gamma={b.get("gamma", 1.0)},format=rgb24')
     proc = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', str(b['src_in']), '-i', b['file'], '-an', '-vf', vf,
                              '-f', 'rawvideo', '-'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     return dict(proc=proc, w=w, h=h, pw=pw, ph=ph, last=None)
@@ -578,7 +670,7 @@ def composite_broll(p, t, frame, readers, fps):
             continue
         r['last'] = img
         u = (t - b['start']) / max(0.01, b['end'] - b['start'])
-        z = 1 + b['push'] * (1 - u)          # gentle pull-out across the clip
+        z = 1 + b['push'] * u                # a gentle push-in across the clip (1.00 -> 1.0 + push)
         cw, ch = r['pw'] / z, r['ph'] / z
         x0, y0 = (r['pw'] - cw) / 2, (r['ph'] - ch) / 2
         kx = r['w'] / cw
@@ -586,7 +678,12 @@ def composite_broll(p, t, frame, readers, fps):
         tile = cv2.warpAffine(img, M, (r['w'], r['h']), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
         frame = frame.copy()
         if b['layout'] == 'full':
-            frame[:] = tile
+            f = b.get('fade', 0)
+            k_in, k_out = (t - b['start']) / f if f else 1, (b['end'] - t) / f if f else 1
+            al = min(1.0, k_in, k_out)
+            if b.get('first') and t - b['start'] < f:
+                al = 1.0      # never dissolve from the speaker at a join: only edges away from cuts fade
+            frame[:] = tile if al >= 1 else (tile * al + frame * (1 - al)).astype(np.uint8)
         else:
             top = int(0.36 * OUT_H) - (OUT_H - r['h']) // 2 + 60      # keep the face in the lower panel
             top = min(max(0, top), r['h'])
@@ -616,26 +713,38 @@ def render(plan_path, draft=False):
                             f"select='{sel}',scale={WORK_W}:{WORK_H}:flags=area,format=rgb24",
                             '-fps_mode', 'passthrough', '-f', 'rawvideo', '-'], stdout=subprocess.PIPE)
     grade = 'eq=contrast=1.06:saturation=1.07:gamma=0.98,vignette=angle=0.42,' if p.get('grade', True) else ''
+    if p.get('grain', 0):
+        grade += f"noise=alls={p['grain']}:allf=t,"
+    ef = p.get('end_fade', 0)
+    total_t = sum(fb - fa for fa, fb in p['segments']) / fps + p.get('pad', 0)
+    fade_v = f",fade=t=out:st={total_t - ef:.3f}:d={ef:.3f}" if ef else ''
     out = os.path.join(root, 'renders', f"{p['name']}{'-draft' if draft else ''}.mp4")
     enc = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24',
                             '-s', f'{OUT_W}x{OUT_H}', '-r', f'{fps:.6f}', '-i', '-', '-i', wav,
-                            '-vf', f"{grade}ass={ass},format=yuv420p",
+                            '-vf', f"{grade}ass={ass}{fade_v},format=yuv420p",
                             '-c:v', 'libx264', '-preset', 'veryfast' if draft else 'medium',
                             '-crf', '23' if draft else '17', '-c:a', 'aac', '-b:a', '256k', '-ar', str(SR),
                             '-movflags', '+faststart', '-shortest', out], stdin=subprocess.PIPE)
     readers = {}
     fsize = WORK_W * WORK_H * 3
-    n_total = sum(fb - fa for fa, fb in p['segments'])
+    n_src = sum(fb - fa for fa, fb in p['segments'])
+    n_total = n_src + int(round(p.get('pad', 0) * fps))
+    img = None
     for i in range(n_total):
-        buf = dec.stdout.read(fsize)
-        if len(buf) < fsize:
-            print(f'warning: source ran out at output frame {i}/{n_total}')
-            break
-        img = np.frombuffer(buf, np.uint8).reshape(WORK_H, WORK_W, 3)
+        if i < n_src:
+            buf = dec.stdout.read(fsize)
+            if len(buf) < fsize:
+                print(f'warning: source ran out at output frame {i}/{n_src}')
+                break
+            img = np.frombuffer(buf, np.uint8).reshape(WORK_H, WORK_W, 3)
+        # past the source (end pad) the last frame stays under the closing cutaway
         t = i / fps
         s = shot_at(p['shots'], t)
         u = ease(min(1, max(0, (t - s['start']) / max(0.001, s['end'] - s['start']))))
-        z = s['zoom'] * (1 + s['push'] * u if s['push'] > 0 else 1 - s['push'] * (1 - u))
+        if s.get('linear'):      # constant-speed push, capped, carried through jump cuts
+            z = s['zoom'] * (1 + min(s['cap'], s['push'] * (t - s['start'])))
+        else:
+            z = s['zoom'] * (1 + s['push'] * u if s['push'] > 0 else 1 - s['push'] * (1 - u))
         cw, ch = WORK_W / z, WORK_H / z
         fx, fy = s['face'][0] * WORK_W, s['face'][1] * WORK_H
         x0 = min(max(0, fx - 0.5 * cw), WORK_W - cw)

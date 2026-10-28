@@ -23,9 +23,9 @@ the transcript, so a new transcript or a changed cut re-times everything.
   "calm_max_pause": 0.6,
   "max_shot": 3.4, "calm_max_shot": 7.0,    // longest shot before a punch-in is added
   "hook": {"line1": "IS SLEEP PARALYSIS", "line2": "JUST SLEEP?", "hold": 3.0},
-  "hook_shot": "W",                         // W wide, M medium, T tight
-  "sections": [{"phrase": "But here's the beautiful thing", "text": "HOW TO GET FREE"}],
-  "slams": [{"phrase": "legal grounds", "text": "LEGAL GROUNDS", "sub": null, "hold": 1.0}],
+  "hook_shot": "W",                         // legacy cut_zooms mode only
+  "sections": [],                           // legacy only: section chips are not in the owner's packs
+  "slams": [],                              // legacy only: dim-and-slam words are not in the owner's packs
   "emphasis": ["sleep", "paralysis", "free"],   // accent-colored caption words; punch-ins outside calm
   "cta": {"phrase": "go into the comment section", "text": "\"I AM FREE\\NINDEED\""},
   "look": {"accent": "#FFC83D", "caption_y": 1300, "caption_px": 92}, // optional overrides
@@ -34,6 +34,13 @@ the transcript, so a new transcript or a changed cut re-times everything.
      "layout": "full",                      // full: replaces the frame; top: clip above, speaker below
      "x": 0.18, "y": 0.5}                   // crop focus in the clip (0 left/top, 1 right/bottom)
   ],
+  "push": {"base": 1.04, "rate": 0.0025, "cap": 0.06},  // one slow push, carried across jump cuts
+  "cut_zooms": false,                       // true only when the brand allows punch-in cuts (legacy W/M/T)
+  "end_hold": 1.0, "end_fade": 1.0,         // hold after the last word, then fade picture and sound
+  "grain": 5, "sfx": false,                 // film grain; synthetic hits only if the brand wants them
+  // broll entries also take "lead" (s before the phrase), "fade" (s), "gamma" (lift dark clips)
+  // look for TSNL: {"font": "Figtree ExtraBold", "title_font": "Libre Caslon Text", "accent": "#C9A45C",
+  //   "text": "#F4EFE6", "caption_px": 80, "case": "as-spoken", "motion": "calm"}
   "music": [                                // licensed beds; ducked under speech, up 4 dB in gaps
     {"file": "music/signs.wav", "from": "start", "to": "Father, I thank you", "in": 0.0, "under": 12, "fade": 0.8},
     {"file": "music/breath-of-awe.wav", "from": "Father, I thank you", "lead": 0.6, "to": "end", "in": 6.4}
@@ -49,6 +56,9 @@ python3 ../../.agents/skills/council-editor/scripts/talking_head.py render <name
 python3 ../../.agents/skills/council-editor/scripts/talking_head.py render <name>.plan.json
 python3 ../../.agents/skills/edit-qc/scripts/craft_qc.py renders/<name>.mp4 --plan <name>.plan.json --voice cache/voice.wav --out qa
 ```
+
+Jump cuts: every join must sit under a full-frame cutaway (start 0.25 s or more before, end 0.25 s
+or more after); list the uncovered joins after `plan` and add cutaways until there are none.
 
 B-roll: pick clips by looking at a per-second contact sheet of each one, set `in` to the moment
 that carries the meaning (the cuffs hitting the ground, the light flaring), and set `x` so the

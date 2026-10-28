@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Measured craft and technical checks for a rendered talking-head short.
 
-Usage:  python3 craft_qc.py <render.mp4> [--plan <name>.plan.json] [--voice cache/voice.wav] [--out qa/]
+Usage:  python3 craft_qc.py <render.mp4> [--plan <name>.plan.json] [--voice cache/voice.wav]
+                         [--transcript render.scribe.json] [--allow-cut-zooms] [--out qa/]
 Writes <out>/craft-qc.md and <out>/craft-qc.json, plus hero and opening contact sheets.
 
 Checks (FAIL lines; NOT RUN lines need the same check done another way; must be fixed or explained before edit QC can pass):
@@ -15,7 +16,16 @@ Checks (FAIL lines; NOT RUN lines need the same check done another way; must be 
   joins      sound level right at each cut vs. the speech level (a loud cut is
              inside a word or breath); measured on the dry voice stem when
              --voice is given, since music and effects fill the gaps on purpose
-  words      fresh speech-to-text of the render vs. the plan's words (>= 95 %)
+  words      fresh speech-to-text of the render vs. the plan's words (>= 95 %);
+             --transcript <render.scribe.json> uses a provider transcript of the render
+  zoom       measured on the picture (feature matching between frames):
+             cut zooms in the middle of a phrase (only a slam may punch in),
+             jump cuts that keep the same framing, sideways pops, pushes faster
+             than 2 %/s or that reverse direction, shots under 0.5 s
+  stacking   two visual events (cut, b-roll in/out, slam) within 0.35 s of each other
+  ending     last word fully heard, at least 0.6 s hold after it, picture and sound
+             fade out, nothing cuts in the last 0.8 s
+Every FAIL writes a frame strip to <out>/flags/ so a person can see it.
 Measurements are evidence, not taste: a person still has to watch and listen.
 """
 import json, os, re, subprocess, sys
@@ -54,6 +64,48 @@ def loudness(path):
     return float(i[-1]), float(tp[-1])
 
 
+ZW, ZH = 360, 640
+
+
+def gray_frames(path):
+    p = subprocess.Popen(['ffmpeg', '-v', 'error', '-i', path, '-vf', f'scale={ZW}:{ZH},format=gray',
+                          '-f', 'rawvideo', '-'], stdout=subprocess.PIPE)
+    raw = p.stdout.read(); p.wait()
+    return np.frombuffer(raw, np.uint8).reshape(-1, ZH, ZW)
+
+
+class Scale:
+    """Scale and sideways shift between two frames of the speaker, from matched features.
+    Only the band from 20 % to 58 % of the height is used: titles, chips, slams and captions
+    sit outside it and would otherwise pin the match to the overlay."""
+    def __init__(self):
+        import cv2
+        self.cv2 = cv2
+        self.orb = cv2.ORB_create(900)
+        self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        self.mask = np.zeros((ZH, ZW), np.uint8)
+        self.mask[int(ZH * 0.20):int(ZH * 0.58)] = 255
+
+    def __call__(self, a, b):
+        ka, da = self.orb.detectAndCompute(a, self.mask)
+        kb, db = self.orb.detectAndCompute(b, self.mask)
+        if da is None or db is None:
+            return None
+        m = self.bf.match(da, db)
+        if len(m) < 20:
+            return None
+        A = np.float32([ka[x.queryIdx].pt for x in m]); B = np.float32([kb[x.trainIdx].pt for x in m])
+        M, inl = self.cv2.estimateAffinePartial2D(A, B, ransacReprojThreshold=2.0)
+        if M is None or inl.sum() < 25:
+            return None
+        return float(np.hypot(M[0, 0], M[1, 0])), float(M[0, 2]) / ZW
+
+
+def strip(video, t, path, n=10):
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', f'{max(0, t - 0.17):.3f}', '-i', video,
+                    '-vf', f'scale=200:-1,tile={n}x1', '-frames:v', '1', path], check=False)
+
+
 def main():
     args = sys.argv[1:]
     if not args:
@@ -80,6 +132,7 @@ def main():
     changes = set(np.where(d > 9)[0] + 1)
     if plan:
         changes |= {int(round(s['start'] * fps)) for s in plan['shots']}
+        changes |= {int(round(b[k] * fps)) for b in plan.get('broll') or [] for k in ('start', 'end')}
     ch = sorted(changes | {0, len(F)})
     stretches = [(a / fps, (b - a) / fps) for a, b in zip(ch, ch[1:]) if b > a]
     calm = []
@@ -116,8 +169,9 @@ def main():
     for i in range(1, len(d) - 1):
         if d[i] > 18 and d[i + 1] > 0.6 * d[i] and not near(i + 1):
             issues.append(f'flash at {(i + 1) / fps:.2f}s')
+    fade_from = len(F) - int(((plan or {}).get('end_fade') or 0) * fps) - 1
     for i, b in enumerate(bright):
-        if b < 8 and 0 < i < len(F) - 1:
+        if b < 8 and 0 < i < min(len(F) - 1, fade_from):
             issues.append(f'black frame at {i / fps:.2f}s')
     run = 0
     for i, x in enumerate(d):
@@ -141,6 +195,19 @@ def main():
         row('joins', not loud, f"{len(plan['joins'])} cuts; " + (', '.join(loud) if loud else 'all sit in quiet'))
 
         try:
+            if opt('--transcript'):
+                r = json.load(open(opt('--transcript')))
+                heard = re.findall(r"[a-z']+", ' '.join(w.get('text', '') for w in r['words']
+                                                         if w.get('type', 'word') == 'word').lower())
+                want = re.findall(r"[a-z']+", ' '.join(w['t'] for w in plan['words']).lower().replace('-', ' '))
+                import difflib
+                sm = difflib.SequenceMatcher(a=want, b=heard, autojunk=False)
+                ratio = sum(b.size for b in sm.get_matching_blocks()) / max(1, len(want))
+                extra = [' '.join(heard[j1:j2]) for op, i1, i2, j1, j2 in sm.get_opcodes() if op != 'equal' and j2 > j1]
+                row('words', ratio >= 0.97 and not extra,
+                    f'{ratio:.1%} of planned words heard ({len(heard)} heard, {len(want)} planned)'
+                    + (f'; heard but not captioned: {extra[:5]}' if extra else ''))
+                raise StopIteration
             from faster_whisper import WhisperModel
             m = WhisperModel('small', compute_type='int8')
             segs, _ = m.transcribe(a16, language='en', word_timestamps=False, vad_filter=True)
@@ -150,10 +217,15 @@ def main():
             sm = difflib.SequenceMatcher(a=want, b=heard, autojunk=False)
             ratio = sum(b.size for b in sm.get_matching_blocks()) / max(1, len(want))
             row('words', ratio >= 0.95, f'{ratio:.1%} of planned words heard in the render ({len(heard)} heard, {len(want)} planned)')
+        except StopIteration:
+            pass
         except Exception as e:      # not installed, or the model download is blocked
             rows.append(dict(check='words', result='NOT RUN',
                              detail=f'speech-to-text unavailable ({type(e).__name__}); transcribe the render '
                                     'with the job provider and compare by hand'))
+
+    if plan:
+        zoom_stack_ending(video, plan, rows, row, fps, out, F, d, a16, opt, args)
 
     # contact sheets for the human pass
     ff = lambda *a: subprocess.run(['ffmpeg', '-v', 'error', '-y', *a], check=True)
@@ -170,6 +242,95 @@ def main():
     json.dump(rows, open(os.path.join(out, 'craft-qc.json'), 'w'), indent=1)
     print('\n'.join(md))
     sys.exit(1 if fails else 0)
+
+
+def zoom_stack_ending(video, plan, rows, row, fps, out, F, d, a16, opt, args):
+    flags = os.path.join(out, 'flags'); os.makedirs(flags, exist_ok=True)
+    G = gray_frames(video)
+    n = min(len(G), len(F))
+    measure = Scale()
+    joins = [round(j * fps) for j in plan['joins']]
+    slam_in = [round(s['start'] * fps) for s in plan.get('slams') or []]
+    broll = [(b['start'] * fps, b['end'] * fps) for b in plan.get('broll') or []]
+    in_broll = lambda i: any(a - 1 <= i <= b + 1 for a, b in broll)
+    near = lambda i, xs, k=2: any(abs(i - x) <= k for x in xs)
+    allow_cut_zoom = '--allow-cut-zooms' in args
+
+    # every visible picture change: measured cuts, plus planned b-roll edges and slam starts
+    cuts = [i + 1 for i in range(len(d)) if d[i] > 9]
+    cuts = [c for k, c in enumerate(cuts) if k == 0 or c - cuts[k - 1] > 1]
+    zoom_bad, push_bad, short_bad = [], [], []
+    for c in cuts:
+        if c >= n or in_broll(c) or in_broll(c - 1):
+            continue
+        m = measure(G[c - 1], G[c])
+        if not m:
+            continue
+        s, dx = m
+        t = c / fps
+        at_join, at_slam = near(c, joins), near(c, slam_in, 3)
+        if abs(s - 1) > 0.03 and not at_join and not at_slam and not allow_cut_zoom:
+            zoom_bad.append(f'cut zoom mid-phrase at {t:.2f}s (x{s:.2f})')
+        elif abs(s - 1) <= 0.03 and abs(dx) > 0.02 and not at_join:
+            zoom_bad.append(f'sideways pop at {t:.2f}s ({dx:+.0%} of width)')
+        elif at_join and abs(s - 1) < 0.06:
+            zoom_bad.append(f'jump cut keeps the same framing at {t:.2f}s (x{s:.2f})')
+    # push speed and direction, from the plan (a pixel estimate is too noisy: the speaker moves).
+    # Pops at cuts are measured on the picture above.
+    for sh in plan['shots']:
+        dur = max(1e-3, sh['end'] - sh['start'])
+        r = sh.get('push', 0) if sh.get('linear') else sh.get('push', 0) / dur * (1.5 if not sh.get('linear') else 1)
+        if abs(r) > 0.02:
+            push_bad.append(f'{"push" if r > 0 else "pull"} of {abs(r):.1%}/s at {sh["start"]:.2f}s')
+        if dur < 0.5 and not any(a0 - 2 <= sh['start'] * fps <= b0 + 2 for a0, b0 in broll):
+            short_bad.append(f'{dur:.2f}s shot at {sh["start"]:.2f}s')
+    dirs = [1 if sh.get('push', 0) >= 0 else -1 for sh in plan['shots']]
+    flips = sum(1 for x, y in zip(dirs, dirs[1:]) if x != y)
+    if flips > 0:
+        push_bad.append(f'push direction flips {flips} times between shots')
+    issues = zoom_bad + push_bad + short_bad
+    row('zoom', not issues, '; '.join(issues[:14]) + (f' (+{len(issues) - 14} more)' if len(issues) > 14 else '')
+        if issues else f'{len(cuts)} cuts measured: framing changes only at jump cuts and slams, pushes smooth')
+    for msg in zoom_bad[:20]:
+        t = float(re.search(r'at ([\d.]+)s', msg).group(1))
+        strip(video, t, os.path.join(flags, f'zoom_{t:06.2f}.jpg'))
+
+    # stacking: two visual events closer than 0.35 s
+    events = sorted([(c / fps, 'cut') for c in cuts] + [(b['start'], 'b-roll in') for b in plan.get('broll') or []]
+                    + [(b['end'], 'b-roll out') for b in plan.get('broll') or []]
+                    + [(s['start'], 'slam') for s in plan.get('slams') or []])
+    stacked = []
+    for (t1, k1), (t2, k2) in zip(events, events[1:]):
+        if 1.5 / fps < t2 - t1 < 0.35:
+            stacked.append(f'{k1} at {t1:.2f}s then {k2} at {t2:.2f}s')
+            strip(video, t1, os.path.join(flags, f'stack_{t1:06.2f}.jpg'))
+    row('stacking', not stacked, '; '.join(stacked[:10]) or 'no two visual events closer than 0.35 s')
+
+    # ending: hold after the last word, then a fade on picture and sound
+    total = n / fps
+    last = plan['words'][-1]['e']
+    hold = total - last
+    bright = F.mean(axis=(1, 2))
+    k = int(fps)
+    pic_fade = bright[-1] < 0.35 * max(1.0, bright[-k - 1]) if len(bright) > k else False
+    tail = a16[-int(0.25 * 16000):]; before = a16[-int(1.2 * 16000):-int(0.8 * 16000)]
+    rms = lambda x: float(np.sqrt((x ** 2).mean()) + 1e-9)
+    snd_fade = rms(tail) < 0.5 * rms(before)
+    late_cut = [c / fps for c in cuts if c / fps > total - 0.8]
+    late_broll = [b['end'] for b in plan.get('broll') or [] if total - 0.8 < b['end'] < total - 1 / fps]
+    probs = []
+    if hold < 0.6:
+        probs.append(f'only {hold:.2f}s after the last word')
+    if not pic_fade:
+        probs.append('picture does not fade out')
+    if not snd_fade:
+        probs.append('sound does not fade out')
+    if late_cut or late_broll:
+        probs.append(f'cut in the last 0.8 s at {", ".join(f"{x:.2f}s" for x in late_cut + late_broll)}')
+    row('ending', not probs, '; '.join(probs) or f'{hold:.2f}s hold after the last word, picture and sound fade')
+    if probs:
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-sseof', '-2', '-i', video, '-vf',
+                        'fps=6,scale=200:-1,tile=12x1', '-frames:v', '1', os.path.join(flags, 'ending.jpg')], check=False)
 
 
 if __name__ == '__main__':

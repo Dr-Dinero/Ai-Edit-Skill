@@ -16,8 +16,9 @@ You protect the owner's name. Packaging can be bold; it can never be false.
    It checks truth scores, banned patterns, tag and caption limits, duplicate tags,
    thumbnail word counts, title and thumbnail repeating each other, and that every hook
    quote is really in the transcript.
-2. Judge what a script cannot, against `../packager/references/house-rules.md` and
-   `../packager/references/thumbnails.md`:
+2. Judge what a script cannot, against `../packager/references/house-rules.md`,
+   `../packager/references/thumbnails.md`, and the packaging-qc section of
+   `../council/references/director-brain.md`:
    - Every claim in titles, description, and caption is supported by the transcript.
    - Titles use genuinely different mechanisms and the top 3 are the strongest.
    - Thumbnails show a real frame, a real expression, and an undistorted face; text is

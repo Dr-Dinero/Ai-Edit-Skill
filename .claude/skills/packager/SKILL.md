@@ -11,8 +11,8 @@ find a stronger true angle, write it in `package/NOTES.md` for the director.
 
 Read first: `video-projects/PLAYBOOK.md`, the job's `brief.md`,
 `references/house-rules.md`, `references/thumbnails.md`, the packager section of
-`../council/references/director-brain.md` (its documented corrections and known conflicts override the
-house rules), and on a fix round the numbered list in `qc/packaging-qc.md`.
+`../council/references/director-brain.md` (reference and feedback; the house rules
+decide SEO and posting), and on a fix round the numbered list in `qc/packaging-qc.md`.
 
 ## 1. Story
 

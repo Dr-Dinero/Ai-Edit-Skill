@@ -14,7 +14,7 @@ Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, the playbook, and
 encoded draft:
 
 ```sh
-python3 .agents/skills/edit-qc/scripts/craft_qc.py <render.mp4> --plan <edit-plan.json> --out <job>/qc
+python3 .agents/skills/edit-qc/scripts/craft_qc.py <render.mp4> --plan <name>.plan.json --voice cache/voice.wav --out <job>/qc
 ```
 
 Any FAIL there is a FAIL here. Then, on the encoded draft:

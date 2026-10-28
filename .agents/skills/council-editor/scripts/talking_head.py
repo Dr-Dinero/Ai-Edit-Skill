@@ -113,6 +113,14 @@ def plan(spec_path):
         i = find_phrase(words, d['phrase'], d.get('after', 0))
         n = len(d['phrase'].split())
         dropped.update(range(i, i + n))
+    if spec.get('selects'):
+        # a short cut: keep only these spans, in source order, each from one phrase to another
+        chosen = set()
+        for r in spec['selects']:
+            i = find_phrase(words, r['from'], r.get('after', 0))
+            j = find_phrase(words, r['to'], words[i]['start']) + len(r['to'].split()) - 1
+            chosen.update(range(i, j + 1))
+        dropped.update(set(range(len(words))) - chosen)
     kept = [w for i, w in enumerate(words) if i not in dropped]
     if spec.get('end_phrase'):
         j = find_phrase(kept, spec['end_phrase'])
@@ -281,11 +289,26 @@ def plan(spec_path):
     if cta:
         sfx.append(dict(kind='pop', t=cta['start'] + 0.1, db=-20))
 
-    planned = dict(source=src, fps=fps, total=round(total, 4), segments=fsegs, joins=joins,
+    # 7. b-roll cutaways and music beds, anchored to words
+    broll = []
+    for r in spec.get('broll', []):
+        i, t = anchor(r['phrase'], r.get('after', 0))
+        st = max(0.0, t - r.get('lead', 0.12))
+        broll.append(dict(file=P(r['file']), start=round(st, 4), end=round(min(total, st + r.get('dur', 2.2)), 4),
+                          src_in=r.get('in', 0.0), layout=r.get('layout', 'full'), push=r.get('push', 0.06),
+                          x=r.get('x', 0.5), y=r.get('y', 0.5)))
+    music = []
+    for m in spec.get('music', []):
+        st = 0.0 if m.get('from', 'start') == 'start' else anchor(m['from'])[1] - m.get('lead', 0.3)
+        en = total if m.get('to', 'end') == 'end' else anchor(m['to'])[1]
+        music.append(dict(file=P(m['file']), start=round(max(0, st), 4), end=round(en, 4), src_in=m.get('in', 0.0),
+                          under=m.get('under', 12), fade=m.get('fade', 0.6)))
+
+    planned = dict(source=src, fps=fps, total=round(total, 4), segments=fsegs, joins=joins, broll=broll, music=music,
                    shots=shots, captions=caps, slams=slams, chips=chips, cta=cta, hook=hook, sfx=sfx,
                    emphasis=sorted(emph), look=spec.get('look', {}), name=spec.get('name', 'edit'), grade=spec.get('grade', True),
                    words=[dict(t=w['text'], s=round(w['o_start'], 3), e=round(w['o_end'], 3)) for w in kept])
-    outp = P('edit-plan.json')
+    outp = P(f"{spec.get('name', 'edit')}.plan.json")
     json.dump(planned, open(outp, 'w'), indent=1)
     lens = [s['end'] - s['start'] for s in shots]
     print(f'plan: {total:.2f}s from {dur:.2f}s, {len(fsegs)} segments, {len(shots)} shots '
@@ -367,8 +390,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             key = re.sub(r'[^a-z]', '', w['t'].lower())
             parts.append(f'{{\\c{gold}}}{t}{{\\c{white}}}' if key in emph else t)
         txt = ' '.join(parts)
+        on_split = any(r['layout'] != 'full' and a < r['end'] and b > r['start'] for r in p.get('broll') or [])
+        y_cap = BROLL_TOP_H if on_split else cap_y
         anim = '{\\fad(110,0)\\blur0.6}' if c['calm'] else '{\\fscx82\\fscy82\\t(0,90,\\fscx104\\fscy104)\\t(90,150,\\fscx100\\fscy100)}'
-        add(5, a, b, 'Cap', f'{{\\pos(540,{cap_y})}}{anim}{txt}')
+        add(5, a, b, 'Cap', f'{{\\pos(540,{y_cap})}}{anim}{txt}')
     if p['hook']:
         h = p['hook']
         add(6, h['start'], h['end'], 'Title', f"{{\\pos(540,{look['title_y']})\\fad(0,180)}}{h['line1']}")
@@ -468,7 +493,25 @@ def build_audio(p, path):
     env, hop = voice_env(voice)
     speech = np.median(env[env > np.percentile(env, 40)])
     voice *= 10 ** (-20 / 20) / (speech + 1e-9)
+    write_wav(os.path.join(os.path.dirname(path), 'voice.wav'), voice)   # dry voice stem for craft QC joins
     mix = voice.copy()
+    # music beds sit `under` dB below speech while he talks and come up 4 dB in the gaps
+    talk = np.convolve((env > speech * 0.25).astype(float), np.ones(60) / 60, mode='same')   # ~300 ms smoothing
+    talk = np.clip(np.repeat(talk, int(SR * hop))[:len(mix)], 0, 1)
+    talk = np.pad(talk, (0, len(mix) - len(talk)), mode='edge')
+    for m in p.get('music') or []:
+        x = read_audio(m['file'])
+        x = x[int(m['src_in'] * SR):]
+        a, b = int(m['start'] * SR), int(m['end'] * SR)
+        n = min(b - a, len(x), len(mix) - a, len(talk) - a)
+        x = x[:n].copy()
+        rms = np.sqrt((x ** 2).mean()) + 1e-9
+        x *= 10 ** ((-20 - m['under']) / 20) / rms
+        f = int(m['fade'] * SR)
+        if f and n > 2 * f:
+            x[:f] *= np.linspace(0, 1, f)[:, None]; x[-f:] *= np.linspace(1, 0, f)[:, None]
+        duck = 10 ** ((4 * (1 - talk[a:a + n])) / 20)
+        mix[a:a + n] += x * duck[:, None]
     for c in p['sfx']:
         s = synth(c['kind'], c['db'])
         at = int(c['t'] * SR) - (len(s) if c['kind'] == 'swell' else 0)
@@ -508,6 +551,51 @@ def shot_at(shots, t):
     return shots[-1]
 
 
+BROLL_TOP_H = 880     # split layout: b-roll above, speaker below
+
+
+def open_broll(b, fps):
+    w, h = (OUT_W, OUT_H) if b['layout'] == 'full' else (OUT_W, BROLL_TOP_H)
+    pw, ph = int(w * (1 + b['push'])) // 2 * 2, int(h * (1 + b['push'])) // 2 * 2
+    vf = (f'fps={fps:.6f},scale={pw}:{ph}:force_original_aspect_ratio=increase,crop={pw}:{ph}:(iw-{pw})*{b.get("x", 0.5)}:(ih-{ph})*{b.get("y", 0.5)},'
+          f'eq=contrast=1.04:saturation=0.9:brightness=-0.03,format=rgb24')
+    proc = subprocess.Popen(['ffmpeg', '-v', 'error', '-ss', str(b['src_in']), '-i', b['file'], '-an', '-vf', vf,
+                             '-f', 'rawvideo', '-'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    return dict(proc=proc, w=w, h=h, pw=pw, ph=ph, last=None)
+
+
+def composite_broll(p, t, frame, readers, fps):
+    import cv2
+    for k, b in enumerate(p.get('broll') or []):
+        if not (b['start'] <= t < b['end']):
+            if k in readers and t >= b['end']:
+                readers.pop(k)['proc'].terminate()
+            continue
+        r = readers.get(k) or readers.setdefault(k, open_broll(b, fps))
+        buf = r['proc'].stdout.read(r['pw'] * r['ph'] * 3)
+        img = np.frombuffer(buf, np.uint8).reshape(r['ph'], r['pw'], 3) if len(buf) == r['pw'] * r['ph'] * 3 else r['last']
+        if img is None:
+            continue
+        r['last'] = img
+        u = (t - b['start']) / max(0.01, b['end'] - b['start'])
+        z = 1 + b['push'] * (1 - u)          # gentle pull-out across the clip
+        cw, ch = r['pw'] / z, r['ph'] / z
+        x0, y0 = (r['pw'] - cw) / 2, (r['ph'] - ch) / 2
+        kx = r['w'] / cw
+        M = np.float32([[kx, 0, -x0 * kx], [0, kx, -y0 * kx]])
+        tile = cv2.warpAffine(img, M, (r['w'], r['h']), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        frame = frame.copy()
+        if b['layout'] == 'full':
+            frame[:] = tile
+        else:
+            top = int(0.36 * OUT_H) - (OUT_H - r['h']) // 2 + 60      # keep the face in the lower panel
+            top = min(max(0, top), r['h'])
+            frame[r['h']:] = frame[top:top + OUT_H - r['h']].copy()
+            frame[:r['h']] = tile
+            frame[r['h'] - 3:r['h'] + 3] = 0          # a thin dark seam
+    return frame
+
+
 def render(plan_path, draft=False):
     import cv2
     p = json.load(open(plan_path))
@@ -535,6 +623,7 @@ def render(plan_path, draft=False):
                             '-c:v', 'libx264', '-preset', 'veryfast' if draft else 'medium',
                             '-crf', '23' if draft else '17', '-c:a', 'aac', '-b:a', '256k', '-ar', str(SR),
                             '-movflags', '+faststart', '-shortest', out], stdin=subprocess.PIPE)
+    readers = {}
     fsize = WORK_W * WORK_H * 3
     n_total = sum(fb - fa for fa, fb in p['segments'])
     for i in range(n_total):
@@ -555,6 +644,7 @@ def render(plan_path, draft=False):
         M = np.float32([[k, 0, -x0 * k], [0, k, -y0 * k]])
         frame = cv2.warpAffine(img, M, (OUT_W, OUT_H), flags=cv2.INTER_LINEAR if k >= 0.75 else cv2.INTER_AREA,
                                borderMode=cv2.BORDER_REPLICATE)
+        frame = composite_broll(p, t, frame, readers, fps)
         enc.stdin.write(frame.tobytes())
         if i % 600 == 0:
             print(f'  frame {i}/{n_total}', flush=True)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Measured craft and technical checks for a rendered talking-head short.
 
-Usage:  python3 craft_qc.py <render.mp4> [--plan edit-plan.json] [--out qa/]
+Usage:  python3 craft_qc.py <render.mp4> [--plan <name>.plan.json] [--voice cache/voice.wav] [--out qa/]
 Writes <out>/craft-qc.md and <out>/craft-qc.json, plus hero and opening contact sheets.
 
 Checks (FAIL lines; NOT RUN lines need the same check done another way; must be fixed or explained before edit QC can pass):
@@ -13,7 +13,8 @@ Checks (FAIL lines; NOT RUN lines need the same check done another way; must be 
              stretches over 4 s
   glitches   1-frame flashes, black frames, frozen runs not explained by a plan event
   joins      sound level right at each cut vs. the speech level (a loud cut is
-             inside a word or breath)
+             inside a word or breath); measured on the dry voice stem when
+             --voice is given, since music and effects fill the gaps on purpose
   words      fresh speech-to-text of the render vs. the plan's words (>= 95 %)
 Measurements are evidence, not taste: a person still has to watch and listen.
 """
@@ -108,7 +109,8 @@ def main():
             for e in plan.get(key) or []:
                 planned |= {int(round(e['start'] * fps)), int(round(e['end'] * fps))}
         planned |= {int(round(s['start'] * fps)) for s in plan['shots']}
-    near = lambda i: any(abs(i - p) <= 3 for p in planned)
+    broll = [(b['start'] * fps - 3, b['end'] * fps + 3) for b in (plan or {}).get('broll') or []]
+    near = lambda i: any(abs(i - p) <= 3 for p in planned) or any(a <= i <= b for a, b in broll)   # stock motion is planned
     issues = []
     bright = F.mean(axis=(1, 2))
     for i in range(1, len(d) - 1):
@@ -125,12 +127,17 @@ def main():
     row('glitches', not issues, ', '.join(issues[:12]) or 'no unplanned flashes, black frames, or freezes')
 
     if plan:
+        jdb, jspeech = db, speech
+        if opt('--voice'):
+            v = audio(opt('--voice'))
+            venv = np.sqrt(np.convolve(v ** 2, np.ones(160) / 160, mode='same'))
+            jdb = 20 * np.log10(venv + 1e-9); jspeech = np.percentile(jdb, 70)
         loud = []
         for j in plan['joins']:
             k = int(j * 16000)
-            w = db[max(0, k - 80):k + 80]
-            if len(w) and w.max() > speech - 8:
-                loud.append(f'{j:.2f}s ({w.max() - speech:+.0f} dB vs speech)')
+            w = jdb[max(0, k - 80):k + 80]
+            if len(w) and w.max() > jspeech - 8:
+                loud.append(f'{j:.2f}s ({w.max() - jspeech:+.0f} dB vs speech)')
         row('joins', not loud, f"{len(plan['joins'])} cuts; " + (', '.join(loud) if loud else 'all sit in quiet'))
 
         try:

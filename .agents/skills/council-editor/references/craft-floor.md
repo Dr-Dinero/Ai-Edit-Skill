@@ -21,6 +21,13 @@ not the edit. Every talking-head Reel or Short now clears this floor before edit
   down the frame. Crop from the 4K source, never upscale a 1080 proxy.
 - A light, consistent grade (a touch of contrast and saturation, soft vignette) on the whole piece.
 
+- **Show what he is talking about.** One locked-off speaker, however well cut, reads as
+  average. Cut to licensed b-roll on the lines that name something visible (the bedroom at
+  night, the phone, the chains, the light, the prayer) about every 10 to 15 s in teaching:
+  full-frame for 1.3 to 2.6 s, or a top split that keeps his face on screen. Pick each clip
+  by looking at it, start it on the moment that carries the meaning, and crop so the subject
+  survives the vertical frame. Never cover a slam, and never let stock become the story.
+
 ## Words on screen
 
 - **Captions are the main graphic, not subtitles.** 1 to 3 words per chunk, broken on phrase
@@ -47,7 +54,9 @@ not the edit. Every talking-head Reel or Short now clears this floor before edit
 - Sound follows visible events, not every cut: a low hit under the hook title, an impact on
   each slam, a soft whoosh on each section chip, a gentle swell into a prayer, a small pop on
   the CTA. Effects sit clearly under the voice but are audible.
-- No music unless the owner approved a track; a weak bed is worse than none.
+- A licensed music bed under the whole piece: tense and low through the teaching, changing to
+  something warmer at the prayer. It sits about 12 dB under the voice and lifts in the gaps.
+  Choose it by mood and listen to the join; a wrong or weak bed is worse than none.
 - Cuts sit in real silence (the quietest 20 ms of the pause), with short fades so nothing clicks.
 - Master to -14 LUFS, true peak at or below -1.5 dBTP, measured on the encoded file.
 

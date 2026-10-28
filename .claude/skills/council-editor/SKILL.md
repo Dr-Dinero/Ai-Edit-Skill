@@ -21,10 +21,11 @@ skills; this role adds the brief, the notes, and the handoff.
    `edit-spec.json` (`references/talking-head-spec.md`) and build with
    `scripts/talking_head.py`: phrase cuts in real silence, a framing change on every jump
    cut, punch-ins from the 4K source, kinetic captions, a hook title, section chips, keyword
-   slams, and sound hits. Look at a draft's contact sheets before the final render. Use
-   `short-form-edit` and HyperFrames instead when the cut needs B-roll, screen recordings, or
+   slams, sound hits, licensed stock b-roll cutaways (full frame or a top split), and a
+   ducked music bed per act. Look at a draft's contact sheets before the final render. Use
+   `short-form-edit` and HyperFrames instead when the cut needs screen recordings or
    designed scenes. Skipping a floor item ("kept it simple") needs a reason in NOTES.md.
-5. Run `python3 .claude/skills/edit-qc/scripts/craft_qc.py <render> --plan <edit-plan.json>`
+5. Run `python3 .claude/skills/edit-qc/scripts/craft_qc.py <render> --plan <name>.plan.json --voice cache/voice.wav`
    on the encoded render and fix every FAIL before handing off.
 6. Render drafts into the video project's `renders/` with a new filename per round.
 7. Fill `edit/NOTES.md`: render paths, the transcript that matches the final cut, what

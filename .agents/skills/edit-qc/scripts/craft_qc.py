@@ -257,7 +257,9 @@ def zoom_stack_ending(video, plan, rows, row, fps, out, F, d, a16, opt, args):
     allow_cut_zoom = '--allow-cut-zooms' in args
 
     # every visible picture change: measured cuts, plus planned b-roll edges and slam starts
-    cuts = [i + 1 for i in range(len(d)) if d[i] > 9]
+    # a cut is a one-frame spike; fast motion (a falling object, a waving hand) stays high for several frames
+    spike = lambda i: d[i] > 1.8 * max(1.0, float(np.median(np.r_[d[max(0, i - 3):i], d[i + 1:i + 4]])))
+    cuts = [i + 1 for i in range(len(d)) if d[i] > 9 and spike(i)]
     cuts = [c for k, c in enumerate(cuts) if k == 0 or c - cuts[k - 1] > 1]
     zoom_bad, push_bad, short_bad = [], [], []
     for c in cuts:
@@ -269,6 +271,11 @@ def zoom_stack_ending(video, plan, rows, row, fps, out, F, d, a16, opt, args):
         s, dx = m
         t = c / fps
         at_join, at_slam = near(c, joins), near(c, slam_in, 3)
+        if not at_join and c + 1 < n:
+            # a renderer pop is a single jump between steady frames; a hand sweeping the band keeps moving
+            after = measure(G[c], G[c + 1])
+            if after and abs(s - 1) < 3 * abs(after[0] - 1) + 0.005 and abs(dx) < 3 * abs(after[1]) + 0.005:
+                continue
         if abs(s - 1) > 0.03 and not at_join and not at_slam and not allow_cut_zoom:
             zoom_bad.append(f'cut zoom mid-phrase at {t:.2f}s (x{s:.2f})')
         elif abs(s - 1) <= 0.03 and abs(dx) > 0.02 and not at_join:

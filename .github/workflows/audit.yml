@@ -1,0 +1,38 @@
+name: Audit
+# Code and supply-chain audit on every push, every pull request, and weekly.
+# Semgrep (code rules) and Gitleaks (committed secrets) are open-source scanners;
+# npm audit covers dependency advisories. Run the same checks locally with `npm run audit`.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '17 9 * * 1'
+permissions:
+  contents: read
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run check:skills
+  semgrep:
+    runs-on: ubuntu-latest
+    container: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config p/default --severity ERROR --error --metrics=off --exclude video-projects --exclude examples .
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

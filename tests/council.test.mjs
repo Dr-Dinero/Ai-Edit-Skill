@@ -140,3 +140,24 @@ test('fetch-drive builds a confirmed download link', async () => {
   const { downloadUrl } = await import('../scripts/fetch-drive.mjs');
   assert.equal(downloadUrl('abc_1-2'), 'https://drive.usercontent.google.com/download?id=abc_1-2&export=download&confirm=t');
 });
+
+test('progress records what a role is doing until the next handoff clears it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'council-progress-'));
+  assert.equal(council(dir, 'new', 'garden').status, 0);
+  assert.notEqual(council(dir, 'progress', 'garden', '--step', 'Rendering', '--pct', '140').status, 0);
+  const r = council(dir, 'progress', 'garden', '--step', 'Writing the brief', '--pct', '40');
+  assert.equal(r.status, 0, r.stderr);
+  const job = () => JSON.parse(readFileSync(join(dir, 'garden/council/job.json'), 'utf8'));
+  assert.equal(job().step.text, 'Writing the brief');
+  assert.equal(job().step.pct, 40);
+  fill(join(dir, 'garden/council/brief.md'), '# Brief\nHook: plants need light.\n');
+  assert.equal(council(dir, 'handoff', 'garden', '--to', 'edit', '--by', 'virality-director').status, 0);
+  assert.equal(job().step, null);
+});
+
+test('board covers replace one job and keep the others', async () => {
+  const { mergeCovers, labelOf } = await import('../scripts/board-covers.mjs');
+  const rows = [{ slug: 'a', i: 0, src: 'x' }, { slug: 'b', i: 0, src: 'old' }];
+  assert.deepEqual(mergeCovers(rows, 'b', [{ label: 'demon', src: 'new' }]), [{ slug: 'a', i: 0, src: 'x' }, { slug: 'b', i: 0, label: 'demon', src: 'new' }]);
+  assert.equal(labelOf('covers/1-curiosity-vertical.png'), 'curiosity vertical');
+});

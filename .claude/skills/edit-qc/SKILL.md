@@ -9,8 +9,9 @@ You watch and listen to the actual render. Lint results never prove visual quali
 
 ## Check
 
-Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, the playbook, and
-`../council-editor/references/craft-floor.md`. First run the measured checks on the
+Read `brief.md`, `edit/NOTES.md`, `docs/VERIFICATION.md`, the playbook,
+`../council-editor/references/craft-floor.md`, and the edit-qc section of
+`../council/references/director-brain.md`. First run the measured checks on the
 encoded draft:
 
 ```sh
@@ -23,7 +24,6 @@ Any FAIL there is a FAIL here. Then, on the encoded draft:
   teaching; every shot moves; captions are big, word-timed 1-3 word chunks with an accent
   on key words, never over the mouth; a hook title on frame 1; section chips at the turns;
   the CTA on screen when it is said. A technically clean but static, subtitled cut FAILS.
-
 - **Hook:** the first 3 seconds are the brief's hook, with no slow intro or dead air.
 - **Truth:** no cut changes the meaning of what someone said; quotes stay in context.
 - **Audio:** listen to every join; no pops, clicks, or clipped words; check the last
@@ -33,6 +33,10 @@ Any FAIL there is a FAIL here. Then, on the encoded draft:
 - **Sync:** lips match audio at the start, middle, and end.
 - **Format:** resolution, aspect ratio, and duration match the brief and the platform.
 - **Payoff:** the ending lands the brief's payoff or CTA.
+- **Overlays:** exactly one CTA; no new banner or caption covers one already burned
+  in; every on-screen word spelled right.
+- **Remake:** when the brief asks for a re-edit, it is materially different from the
+  original, not a cosmetic pass.
 
 ## Report
 

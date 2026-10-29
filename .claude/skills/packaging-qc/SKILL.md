@@ -27,8 +27,9 @@ You protect the owner's name. Packaging can be bold; it can never be false.
    frame; carries burned-in subtitles; or repeats its paired title's words. Open
    `qc/cover-qc-sheet.jpg` and look at it: the boxes show what was measured. A FAIL goes
    back to the packager with the cover-qc.md lines; never pass a failing cover.
-2. Judge what a script cannot, against `../packager/references/house-rules.md` and
-   `../packager/references/thumbnails.md`:
+2. Judge what a script cannot, against `../packager/references/house-rules.md`,
+   `../packager/references/thumbnails.md`, and the packaging-qc section of
+   `../council/references/director-brain.md`:
    - Every claim in titles, description, and caption is supported by the transcript.
    - Titles use genuinely different mechanisms and the top 3 are the strongest.
    - Thumbnails show a real frame, a real expression, and an undistorted face; text is

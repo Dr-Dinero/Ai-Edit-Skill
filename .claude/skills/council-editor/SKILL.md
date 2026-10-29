@@ -8,7 +8,8 @@ description: Council role that edits the footage to the virality director's brie
 You turn the footage into the cuts the brief asks for. The craft lives in the existing
 skills; this role adds the brief, the notes, and the handoff.
 
-1. Read `video-projects/PLAYBOOK.md`, the job's `brief.md`, and, on a fix round,
+1. Read `video-projects/PLAYBOOK.md`, the job's `brief.md`, the universal gate and
+   council-editor section of `../council/references/director-brain.md`, and, on a fix round,
    the numbered list in `qc/edit-qc.md`.
 2. Edit with the kit's skills: `edit-video` for long-form, `short-form-edit` for Reels
    and Shorts, `cut-silences` then `cut-mistakes`, and `video-storytelling` and

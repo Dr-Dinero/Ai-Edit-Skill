@@ -49,7 +49,9 @@ and its QC, the job is flagged NEEDS OWNER on the board: stop and ask the owner.
 ## Rules every role follows
 
 1. Read `video-projects/PLAYBOOK.md` (create it from `templates/PLAYBOOK.md` if
-   missing), the job's `brief.md`, and your own skill before working.
+   missing), the job's `brief.md`, your own skill, and the universal gate plus your
+   role's section in `references/director-brain.md` (the social media director's
+   documented judgment) before working.
 2. Write your output into the job folder, then hand off with a one-line note that the
    next role can act on. Talk to the next role through files, not through the owner.
 3. QC roles send work back to its maker with a numbered fix list. They never fix it

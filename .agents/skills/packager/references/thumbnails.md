@@ -27,6 +27,36 @@ human moment). Every concept is about the primary subject and core story; nothin
 - `still`: `{ "time": "m:ss", "file": "stills/still-07.jpg" }`, the real frame used (paths
   are relative to package.json).
 
+## Symbolic covers (Reels and Shorts)
+
+The owner calibrated cover taste on 2026-10-29 with a sleep paralysis Reel. A face plus
+a title card read as "average". The cover should show what the story is about. For a Reel
+or Short cover (vertical 1080x1920), write at least one `symbol` concept next to the
+real-frame concepts:
+
+- **One intriguing symbol, not a literal scene.** Pick the single object or moment that
+  makes a viewer curious, and imply the threat or payoff instead of showing it. The
+  winner for sleep paralysis was a red 3:00 clock glow above frozen open eyes, and it
+  beat every literal demon-on-the-bed scene. Use 1-2 focal elements, deep negative
+  space, and one accent color.
+- **Dark oil painting finish.** Classical chiaroscuro (Fuseli and Rembrandt light),
+  visible brushwork, one warm or red light source. Flat vector art is a sketch stage
+  only.
+- **Tall condensed caps headline** (Anton or Bebas Neue): 1-4 words, white plus one
+  accent-color word, inside the profile-grid band (y 240-1680) and clear of the Reels UI.
+- **Face by topic.** Story, spiritual-warfare, and concept topics use the symbol with no
+  face. Testimony, prayer-over-you, and direct-address talks may use the real-frame
+  face layouts above.
+
+The image model paints only the scene: no people's faces from the video, and no text.
+That avoids the face drift and misspelled text that made Stillshot repaint frames. The
+headline is set locally in the real font, and cover QC still runs. Prompt shape:
+`dark oil painting, chiaroscuro, <symbol and setting>, single <color> light source,
+deep shadows, empty upper third for a headline, vertical 9:16, no text, no letters`.
+Generating needs `OPENAI_API_KEY` with `api.openai.com` allowed in the environment.
+Without it, write the prompt into the concept's `scene` so a person can paste it into a
+free image app and drop the result back in as the concept's `still`.
+
 ## Picking stills
 
 ```bash

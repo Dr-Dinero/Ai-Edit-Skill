@@ -122,6 +122,7 @@ async function main() {
   try {
     for (const [i, c] of (pkg.thumbnails || []).entries()) {
       if (only && !only.has(i + 1)) continue;
+      if (c.style === 'symbol') continue; // painted by paint_covers.py
       const still = c.still?.file && resolve(base, c.still.file), still2 = c.still2?.file && resolve(base, c.still2.file);
       if (!still || !existsSync(still)) { problems.push(`Thumbnail ${i + 1}: still.file is missing or not found; run pick-stills first.`); continue; }
       if (SPLIT.has(c.style) && still2 && !existsSync(still2)) { problems.push(`Thumbnail ${i + 1}: still2.file not found.`); continue; }

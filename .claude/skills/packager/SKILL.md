@@ -40,12 +40,14 @@ Follow `references/thumbnails.md`:
 ```bash
 npm run stills -- <final render> --out video-projects/<slug>/council/package/stills
 npm run thumbs -- video-projects/<slug>/council/package/package.json
+npm run covers -- video-projects/<slug>/council/package/package.json   # symbol concepts
 ```
 
 Pick real stills from the contact sheet, write 3-4 concepts with different angles and a
 `design` block each, render them, and look at every render plus `phone-preview.png`.
 Re-render until faces, crops, and text read cleanly. Never let a generative model
-redraw a real face.
+redraw a real face. For Reels and Shorts on story, spiritual-warfare, or concept topics,
+also write a `symbol` concept: a painted scene with no face (see Symbolic covers).
 
 ## 4. Check and hand off
 

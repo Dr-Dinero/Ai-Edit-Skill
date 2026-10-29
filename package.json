@@ -16,6 +16,7 @@
     "check:package": "node .claude/skills/packager/scripts/check-package.mjs",
     "stills": "node .claude/skills/packager/scripts/pick-stills.mjs",
     "thumbs": "node .claude/skills/packager/scripts/render-thumbnails.mjs",
+    "covers": "python3 .claude/skills/packager/scripts/paint_covers.py",
     "publish-media": "node scripts/publish-media.mjs",
     "fetch-drive": "node scripts/fetch-drive.mjs",
     "demo": "node scripts/new-video.mjs demo",

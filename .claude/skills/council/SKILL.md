@@ -36,6 +36,7 @@ video project (override with `--root` or `COUNCIL_ROOT`).
 npm run council -- new <slug> --footage <path> [--platforms youtube,instagram] [--autopost "<owner's words>"]
 npm run council -- board                       # every job, newest first
 npm run council -- status <slug>               # full job.json
+npm run council -- progress <slug> --step "<what is happening now>" [--pct 0-100]
 npm run council -- due                         # JSON of what each role owes right now
 npm run council -- handoff <slug> --to <stage> --by <role> --note "<one line>"
 npm run council -- approve <slug> --quote "<owner's exact words>"
@@ -84,6 +85,13 @@ folder (in a cloud project, the project's shared files) instead of `video-projec
   `NODE_USE_ENV_PROXY=1 npm run fetch-drive -- <file-id> <out> --bytes <size>`, which needs
   the folder shared as "Anyone with the link: Viewer" and `drive.usercontent.google.com`
   allowed in the environment's network settings.
+- **Progress**: the owner watches the dashboard, so every role records what it is
+  doing inside its stage with `council progress` (and on the dashboard board) at each
+  step, not only at handoffs. A handoff clears the step. Cover previews reach the
+  dashboard only through `npm run board-covers`, never baked into the page.
+  [docs/COUNCIL-SETUP.md](../../../docs/COUNCIL-SETUP.md) and
+  [docs/council/hourly-run.md](../../../docs/council/hourly-run.md) are the setup guide and
+  the scheduled-task prompt.
 - **Worker** (hourly): run `council due`. For each entry, load that role's skill and do
   the work: analyst reads that are due, and any job parked at a role's stage. A job at
   `approval`, or flagged NEEDS OWNER, gets one message to the owner with the preview

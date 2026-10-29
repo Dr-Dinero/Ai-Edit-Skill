@@ -16,6 +16,19 @@ You protect the owner's name. Packaging can be bold; it can never be false.
    It checks truth scores, banned patterns, tag and caption limits, duplicate tags,
    thumbnail word counts, title and thumbnail repeating each other, and that every hook
    quote is really in the transcript.
+   Then run cover QC on every vertical Reel/Short cover:
+   ```bash
+   python3 .agents/skills/packaging-qc/scripts/cover_qc.py video-projects/<slug>/council/package/package.json \
+     --out video-projects/<slug>/council/qc
+   ```
+   It fails a cover whose headline falls outside the 3:4 profile-grid crop (y 240-1680) or
+   under the Reels header, action rail, or caption area; sits on the face or hair; has low
+   contrast or letters too small for a grid tile; has no well-lit, in-focus face fully in
+   frame; carries burned-in subtitles; or repeats its paired title's words. A `symbol`
+   cover (a painted scene with no face) skips the face checks; look at it yourself for
+   stray painted text, a face that reads as Apostle, gore, or a demon shown outright. Open
+   `qc/cover-qc-sheet.jpg` and look at it: the boxes show what was measured. A FAIL goes
+   back to the packager with the cover-qc.md lines; never pass a failing cover.
 2. Judge what a script cannot, against `../packager/references/house-rules.md`,
    `../packager/references/thumbnails.md`, and the packaging-qc section of
    `../council/references/director-brain.md`:
@@ -30,4 +43,4 @@ You protect the owner's name. Packaging can be bold; it can never be false.
 3. Write `qc/packaging-qc.md` with `Verdict: PASS` or `Verdict: FAIL`, the evidence,
    and on FAIL a numbered fix list that names each field.
 4. Hand off with `--by packaging-qc`: PASS `--to approval` (only when check-package is
-   clean), FAIL `--to package`. Never edit the package yourself.
+   clean and cover QC passes), FAIL `--to package`. Never edit the package yourself.

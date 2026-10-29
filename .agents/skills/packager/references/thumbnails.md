@@ -27,6 +27,61 @@ human moment). Every concept is about the primary subject and core story; nothin
 - `still`: `{ "time": "m:ss", "file": "stills/still-07.jpg" }`, the real frame used (paths
   are relative to package.json).
 
+## Symbolic covers (Reels and Shorts)
+
+The owner calibrated cover taste on 2026-10-29 with a sleep paralysis Reel. A face plus
+a title card read as "average". The cover should show what the story is about. For a Reel
+or Short cover (vertical 1080x1920), write at least one `symbol` concept next to the
+real-frame concepts:
+
+- **One intriguing symbol, not a literal scene.** Pick the single object or moment that
+  makes a viewer curious, and imply the threat or payoff instead of showing it. The
+  winner for sleep paralysis was a red 3:00 clock glow above frozen open eyes, and it
+  beat every literal demon-on-the-bed scene. Use 1-2 focal elements, deep negative
+  space, and one accent color.
+- **Dark oil painting finish.** Classical chiaroscuro (Fuseli and Rembrandt light),
+  visible brushwork, one warm or red light source. Flat vector art is a sketch stage
+  only.
+- **Tall condensed caps headline** (Anton or Bebas Neue): 1-4 words, white plus one
+  accent-color word, inside the profile-grid band (y 240-1680) and clear of the Reels UI.
+- **Face by topic.** Story, spiritual-warfare, and concept topics use the symbol with no
+  face. Testimony, prayer-over-you, and direct-address talks may use the real-frame
+  face layouts above.
+
+The image model paints only the scene: no people's faces from the video, and no text.
+That avoids the face drift and misspelled text that made Stillshot repaint frames. The
+headline is set locally in the real font, and cover QC still runs.
+
+```json
+{ "angle": "CURIOSITY", "style": "symbol", "text": "3:00 AM. FROZEN.",
+  "pairs_with": "Why So Many People Are Suffering With Sleep Paralysis Now",
+  "design": { "key_word": "3:00 AM." },
+  "paint": { "scene": "Extreme close-up of a person lying on a pillow in the dark, only the eyes visible, frozen wide open, lit by a faint red glow from an unseen bedside clock. The face sits in the lower half; the rest dissolves into darkness.",
+             "light": "deep red", "accent": "#FF2E24", "shift": 0.35, "top": 300, "dy": 0 } }
+```
+
+- `scene`: the symbol, the setting, where it sits (lower half), and the mood. The script
+  adds the house finish: dark oil painting, chiaroscuro, one `light` source, an empty
+  upper third, no text or numbers. Ask for a clock with a blank dial, never digits.
+- `accent`: the key-word colour; `key_word` may be several words.
+- `shift`: where to crop the 2:3 painting to 9:16 (0 left, 0.5 centre, 1 right).
+- `top`: the headline's top edge (keep 250 or lower). `dy`: push the painted scene down
+  that many pixels when its focal object reaches the headline.
+
+```bash
+npm run covers -- video-projects/<slug>/council/package/package.json [--only 1,3] [--repaint]
+```
+
+This paints `<n>-<angle>-painting.png` with the OpenAI image API (`gpt-image-2`, about
+$0.20 a painting at high quality; it reuses an existing painting unless `--repaint`),
+fits it to 1080x1920, sets the headline in Anton, and records `painting`, `cover`, and
+`layout` on the concept. `npm run thumbs` skips symbol concepts. A tight human detail
+(frozen eyes, a gripping hand) with the threat implied won calibration over a wide room.
+
+Without `OPENAI_API_KEY` (and `api.openai.com` allowed), the script prints each full
+prompt and the path to save the painting at; a person pastes the prompt into a free
+image app, saves the portrait result there, and runs the command again.
+
 ## Picking stills
 
 ```bash
@@ -67,6 +122,8 @@ Give each concept its real still and a `design` block, then render:
 - `text_side`: left, right, top, or bottom. Defaults to the side away from the face.
 - `key_word`: the one word drawn in #FFD54A; defaults to the last word.
 - `zoom`: 1 keeps the frame; 1.2-1.4 tightens on the face. `grade`: warm, cool, neutral.
+- `brightness`: optional lift for a dark still (1.2-1.35); cover QC fails a face darker
+  than 70/255.
 
 ```bash
 npm run thumbs -- video-projects/<slug>/council/package/package.json [--only 1,3]
@@ -82,7 +139,10 @@ What the renderer does: crop and position the real frame, grade it, darken the t
 side, and set the headline in the bundled Anton font (all caps, at most 2 lines,
 white with one key word, auto-sized, clear of the bottom-right duration badge). Reel
 covers put the frame over a blurred copy of itself so the headline sits above the
-face. It never redraws a face, adds arrows, flames, glowing eyes, logos, or borders.
+face, inside the 3:4 crop the Instagram profile grid shows (y 240-1680) and below the
+Reels header. Packaging QC runs `packaging-qc/scripts/cover_qc.py` on every cover; fix
+what it reports (usually `focus`, `brightness`, or a word repeated from the title)
+before handing off. It never redraws a face, adds arrows, flames, glowing eyes, logos, or borders.
 
 Look at every render and at `phone-preview.png` before handing off: the face is not
 cut at the top, the expression is real, the text is spelled right and readable at

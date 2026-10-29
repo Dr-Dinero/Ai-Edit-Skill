@@ -14,6 +14,7 @@ edit. Bring your own accounts and credits, and configure only what you use.
 | ElevenLabs Scribe | Nate's default for speech transcription | Your own key with `speech_to_text` access and available usage. The included helper sends audio to ElevenLabs. |
 | OpenAI Whisper API | Alternative cloud transcription | Your own OpenAI API key and API billing. Ask the assistant to configure the call and normalize its word timestamps. |
 | Local Whisper or whisper.cpp | Alternative transcription on your computer | Separate runtime and model installation. No cloud transcription key; needs model downloads, disk space, and local compute. |
+| OpenAI image API (`gpt-image-2`) | Optional painted symbol covers for Reels and Shorts (`npm run covers`) | Your own `OPENAI_API_KEY` with `api.openai.com` reachable; about $0.20 a painting at high quality. Needs Python 3 with Pillow (`pip install pillow`). Without a key the script prints prompts to paste into a free image app. |
 | Kie.ai | Optional generated moving B-roll, images, and other supported assets | Your own account, key, and credits. Existing footage and supplied assets can be used instead. |
 | Your footage, logos, fonts, music, and sound effects | Building the actual edit | Supply assets you can use. The kit does not include a stock-media or music subscription. |
 

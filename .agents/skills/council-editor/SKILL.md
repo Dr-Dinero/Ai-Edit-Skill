@@ -26,6 +26,9 @@ skills; this role adds the brief, the notes, and the handoff.
    and a 1 s hold and fade at the end. Look at a draft's contact sheets before the final render. Use
    `short-form-edit` and HyperFrames instead when the cut needs screen recordings or
    designed scenes. Skipping a floor item ("kept it simple") needs a reason in NOTES.md.
+   For designed moments (a 3D object or title, a camera move through depth), follow
+   `references/motion-and-3d.md`: storyboard the beats, build them in HyperFrames with
+   Three.js from `templates/3d-beat.html`, render each to an MP4, and cut it in as b-roll.
 5. Run `python3 .agents/skills/edit-qc/scripts/craft_qc.py <render> --plan <name>.plan.json --voice cache/voice.wav`
    on the encoded render and fix every FAIL before handing off.
 6. Render drafts into the video project's `renders/` with a new filename per round.

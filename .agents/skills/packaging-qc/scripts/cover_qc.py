@@ -13,6 +13,7 @@ For each thumbnail concept with a vertical cover it checks:
   captions    no burned-in subtitle text below the headline (frames pulled from a captioned render)
   sharp       the face is in focus after scaling
   words       2-5 words that do not repeat the paired title
+Concepts with "style": "symbol" (painted scene, no face) skip the head, face and sharp checks.
 Writes <out>/cover-qc.json, cover-qc.md and cover-qc-sheet.jpg (each cover with its boxes and
 the grid crop drawn). Exits 1 when any cover fails.
 """
@@ -34,13 +35,14 @@ STOP = set('a an the and or but of to in on at for with is are was be it its thi
 
 
 def text_mask(img):
-    """White or key-yellow headline pixels that sit next to the black stroke."""
+    """White, key-yellow or key-red headline pixels that sit next to the black stroke."""
     b, g, r = [img[:, :, i].astype(int) for i in range(3)]
     white = (np.minimum(np.minimum(r, g), b) > 232)
     yellow = (r > 225) & (g > 180) & (b < 140)
+    red = (r > 225) & (g < 90) & (b < 90)              # red key word on painted symbol covers
     dark = (np.maximum(np.maximum(r, g), b) < 40).astype(np.uint8)
     near_dark = cv2.dilate(dark, np.ones((13, 13), np.uint8)) > 0
-    m = ((white | yellow) & near_dark).astype(np.uint8)
+    m = ((white | yellow | red) & near_dark).astype(np.uint8)
     return cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
 
 
@@ -137,7 +139,8 @@ def check(path, concept):
     head = None
     if head_lines:
         head = [min(l[0] for l in head_lines), min(l[1] for l in head_lines), max(l[2] for l in head_lines), max(l[3] for l in head_lines)]
-    face, hair_k = find_face(img, gray)
+    symbol = concept.get('style') == 'symbol'        # painted scene with no face from the video
+    face, hair_k = (None, 0) if symbol else find_face(img, gray)
     res['boxes'] = {'headline': head, 'face': face, 'hair': hair_k, 'captions': lower}
 
     if head is None:
@@ -155,6 +158,8 @@ def check(path, concept):
             hair = [face[0] - int(0.1 * fh), face[1] - int(hair_k * fh), face[2] + int(0.1 * fh), face[3]]
             gap = hair[1] - head[3]
             ck['head'] = [overlap(head, hair) == 0, f'{gap}px between the headline and the top of the hair' if gap >= 0 else f'headline covers {-gap}px of the head']
+        elif symbol:
+            ck['head'] = [True, 'symbol cover: no face to keep clear']
         else:
             ck['head'] = [False, 'no face to measure against']
         # contrast: glyph colour against the surroundings outside the stroke
@@ -185,6 +190,8 @@ def check(path, concept):
         small = cv2.resize(gray[fy0:fy1, fx0:fx1], (200, 200))
         sharp = float(cv2.Laplacian(small, cv2.CV_64F).var())
         ck['sharp'] = [sharp >= 60, f'face detail {sharp:.0f} (need 60)']
+    elif symbol:
+        ck['face'] = ck['sharp'] = [True, 'symbol cover: no face, face checks skipped']
     else:
         ck['face'] = [False, 'no face found']
         ck['sharp'] = [False, 'no face to measure']

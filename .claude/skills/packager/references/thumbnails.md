@@ -50,12 +50,37 @@ real-frame concepts:
 
 The image model paints only the scene: no people's faces from the video, and no text.
 That avoids the face drift and misspelled text that made Stillshot repaint frames. The
-headline is set locally in the real font, and cover QC still runs. Prompt shape:
-`dark oil painting, chiaroscuro, <symbol and setting>, single <color> light source,
-deep shadows, empty upper third for a headline, vertical 9:16, no text, no letters`.
-Generating needs `OPENAI_API_KEY` with `api.openai.com` allowed in the environment.
-Without it, write the prompt into the concept's `scene` so a person can paste it into a
-free image app and drop the result back in as the concept's `still`.
+headline is set locally in the real font, and cover QC still runs.
+
+```json
+{ "angle": "CURIOSITY", "style": "symbol", "text": "3:00 AM. FROZEN.",
+  "pairs_with": "Why So Many People Are Suffering With Sleep Paralysis Now",
+  "design": { "key_word": "3:00 AM." },
+  "paint": { "scene": "Extreme close-up of a person lying on a pillow in the dark, only the eyes visible, frozen wide open, lit by a faint red glow from an unseen bedside clock. The face sits in the lower half; the rest dissolves into darkness.",
+             "light": "deep red", "accent": "#FF2E24", "shift": 0.35, "top": 300, "dy": 0 } }
+```
+
+- `scene`: the symbol, the setting, where it sits (lower half), and the mood. The script
+  adds the house finish: dark oil painting, chiaroscuro, one `light` source, an empty
+  upper third, no text or numbers. Ask for a clock with a blank dial, never digits.
+- `accent`: the key-word colour; `key_word` may be several words.
+- `shift`: where to crop the 2:3 painting to 9:16 (0 left, 0.5 centre, 1 right).
+- `top`: the headline's top edge (keep 250 or lower). `dy`: push the painted scene down
+  that many pixels when its focal object reaches the headline.
+
+```bash
+npm run covers -- video-projects/<slug>/council/package/package.json [--only 1,3] [--repaint]
+```
+
+This paints `<n>-<angle>-painting.png` with the OpenAI image API (`gpt-image-2`, about
+$0.20 a painting at high quality; it reuses an existing painting unless `--repaint`),
+fits it to 1080x1920, sets the headline in Anton, and records `painting`, `cover`, and
+`layout` on the concept. `npm run thumbs` skips symbol concepts. A tight human detail
+(frozen eyes, a gripping hand) with the threat implied won calibration over a wide room.
+
+Without `OPENAI_API_KEY` (and `api.openai.com` allowed), the script prints each full
+prompt and the path to save the painting at; a person pastes the prompt into a free
+image app, saves the portrait result there, and runs the command again.
 
 ## Picking stills
 

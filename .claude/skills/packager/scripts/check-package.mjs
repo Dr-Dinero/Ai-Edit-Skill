@@ -63,7 +63,7 @@ export function checkPackage(pkg, { transcript = null, faith = false } = {}) {
     const pair = titles.find(t => norm(t?.title) === norm(th?.pairs_with));
     if (th?.pairs_with && !pair) warnings.push(`${tag} pairs with a title that is not in the list.`);
     if (pair && text && norm(pair.title).includes(norm(text))) errors.push(`${tag} repeats words from its title; the thumbnail should ask the question the title deepens.`);
-    if (!th?.still?.time && !th?.still?.file) warnings.push(`${tag} names no real still (time or file) from the footage.`);
+    if (th?.style !== 'symbol' && !th?.still?.time && !th?.still?.file) warnings.push(`${tag} names no real still (time or file) from the footage.`);
     if (pkg.video_format === 'short' && (th?.file || th?.layout?.wide)) errors.push(`${tag} has a wide thumbnail, but a short gets a vertical cover only; re-render.`);
     if (pkg.video_format === 'short' && th?.layout && !th.cover) errors.push(`${tag} has no vertical cover; re-render.`);
     for (const [format, lay] of Object.entries(th?.layout || {})) {

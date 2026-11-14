@@ -5,7 +5,7 @@
 // only checks the preview-blocking conditions lint warns-but-doesn't-fail on.
 //
 // Usage:  node scripts/preflight.mjs <project-folder>
-// Example: node scripts/preflight.mjs video-projects/may-shorts-19
+// Example: node scripts/preflight.mjs video-projects/my-video
 
 import { readFileSync, existsSync, statSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";

@@ -171,3 +171,8 @@ test('board covers replace one job and keep the others', async () => {
   assert.deepEqual(mergeCovers(rows, 'b', [{ label: 'demon', src: 'new' }]), [{ slug: 'a', i: 0, src: 'x' }, { slug: 'b', i: 0, label: 'demon', src: 'new' }]);
   assert.equal(labelOf('covers/1-curiosity-vertical.png'), 'curiosity vertical');
 });
+
+test('engine files match the Free-Editor lock', () => {
+  const result = spawnSync(process.execPath, [join(root, 'scripts/engine-sync.mjs'), '--check', '--root', root], { encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+});

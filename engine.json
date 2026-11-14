@@ -1,0 +1,19 @@
+{
+  "source": "https://github.com/Dr-Dinero/Free-Editor",
+  "keep": [
+    "README.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "package.json",
+    "package-lock.json",
+    ".env.example",
+    ".gitignore",
+    ".github/",
+    ".claude/launch.json",
+    ".claude/skills/edit-qc/SKILL.md",
+    "docs/TOOLS-AND-API-KEYS.md",
+    "scripts/check-kit.mjs"
+  ]
+}

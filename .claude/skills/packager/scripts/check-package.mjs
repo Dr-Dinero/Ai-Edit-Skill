@@ -53,6 +53,7 @@ export function checkPackage(pkg, { transcript = null, faith = false } = {}) {
   if (caption.length > 2200) errors.push('Instagram caption is over 2200 characters.');
   if ((caption.match(/#[^\s#]+/g) || []).length > 30) errors.push('Instagram caption has more than 30 hashtags.');
 
+  if (!['short', 'long'].includes(pkg.video_format)) warnings.push('video_format is not "short" or "long"; set it so thumbnails render in the right shape.');
   const thumbs = Array.isArray(pkg.thumbnails) ? pkg.thumbnails : [];
   if (!thumbs.length) errors.push('No thumbnail concepts.');
   thumbs.forEach((th, i) => {
@@ -63,6 +64,8 @@ export function checkPackage(pkg, { transcript = null, faith = false } = {}) {
     if (th?.pairs_with && !pair) warnings.push(`${tag} pairs with a title that is not in the list.`);
     if (pair && text && norm(pair.title).includes(norm(text))) errors.push(`${tag} repeats words from its title; the thumbnail should ask the question the title deepens.`);
     if (!th?.still?.time && !th?.still?.file) warnings.push(`${tag} names no real still (time or file) from the footage.`);
+    if (pkg.video_format === 'short' && (th?.file || th?.layout?.wide)) errors.push(`${tag} has a wide thumbnail, but a short gets a vertical cover only; re-render.`);
+    if (pkg.video_format === 'short' && th?.layout && !th.cover) errors.push(`${tag} has no vertical cover; re-render.`);
     for (const [format, lay] of Object.entries(th?.layout || {})) {
       if (lay?.fits === false) errors.push(`${tag} ${format} render: text does not fit in 2 readable lines.`);
       if (lay?.overlapsBadge) errors.push(`${tag} ${format} render: text reaches the bottom-right duration badge.`);

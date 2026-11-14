@@ -21,6 +21,7 @@ For one stage, load the matching local skill:
 | Need | Skill |
 | --- | --- |
 | Reels, Shorts, and short advertisements | `short-form-edit` |
+| A batch of Reels or ads built from recorded takes, one command, gated | `batch-reels` (`npm run batch`) |
 | Motion-design showreels and brand reels cut to music | `motion-showreel` |
 | Existing May Shorts example maintenance | `short-form-video` |
 | New motion-graphics video from a brief | `make-a-video` |

@@ -34,6 +34,8 @@
     "gate": "python3 .claude/skills/edit-qc/scripts/first_pass_gate.py",
     "deliver": "python3 scripts/deliver.py",
     "tools": "python3 scripts/power_tools.py",
+    "batch": "python3 .claude/skills/batch-reels/scripts/reel_batch.py",
+    "assemble": "python3 .claude/skills/batch-reels/scripts/assemble_takes.py",
     "lottie:vendor": "node scripts/vendor-lottie.mjs",
     "engine:sync": "node scripts/engine-sync.mjs",
     "engine:check": "node scripts/engine-sync.mjs --check"

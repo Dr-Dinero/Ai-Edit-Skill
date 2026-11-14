@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>3D cross reveal</title>
+<script src="assets/gsap.min.js"></script>
+<script src="assets/three.min.js"></script>
+<style>
+@font-face{font-family:'Libre Caslon Text';src:url(assets/LibreCaslonText-Regular.ttf)}
+@font-face{font-family:Figtree;font-weight:700;src:url(assets/Figtree-Bold.ttf)}
+*{box-sizing:border-box}html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#07060a}
+#cross3d{position:relative;width:1080px;height:1920px;overflow:hidden;background:#07060a}
+#gl{position:absolute;inset:0}
+#gl canvas{display:block;width:1080px;height:1920px}
+#line{position:absolute;left:0;right:0;top:1520px;text-align:center;font:500 92px/1.1 'Libre Caslon Text',serif;color:#F4EFE6;letter-spacing:1px}
+#line b{color:#C9A45C;font-weight:400}
+#kicker{position:absolute;left:0;right:0;top:1440px;text-align:center;font:700 34px Figtree,sans-serif;color:#C9A45C;letter-spacing:10px}
+</style></head><body>
+<div id="cross3d" data-composition-id="cross3d" data-start="0" data-duration="6" data-width="1080" data-height="1920">
+  <div id="gl" class="clip" data-start="0" data-duration="6" data-track-index="0"></div>
+  <div id="kicker" class="clip" data-start="0" data-duration="6" data-track-index="1">IN JESUS' NAME</div>
+  <div id="line" class="clip" data-start="0" data-duration="6" data-track-index="2">Leviathan is <b>destroyed</b></div>
+</div>
+<script>
+// A gold cross extruded in real 3D, lit by a warm key and rim light, drifting in a field of dust.
+// Every frame is drawn from timeline state, so HyperFrames can seek to any time and get the same image.
+const W = 1080, H = 1920;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.6;
+document.getElementById('gl').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#07060a');
+scene.fog = new THREE.Fog('#07060a', 9, 22);
+const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 100);
+
+// Cross outline (unit: 1 = beam width), extruded with a bevel so light catches the edges.
+const s = new THREE.Shape();
+[[-0.5, -3.2], [0.5, -3.2], [0.5, 0.6], [1.9, 0.6], [1.9, 1.6], [0.5, 1.6], [0.5, 2.8], [-0.5, 2.8], [-0.5, 1.6], [-1.9, 1.6], [-1.9, 0.6], [-0.5, 0.6]]
+  .forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)));
+s.closePath();
+const geo = new THREE.ExtrudeGeometry(s, { depth: 0.55, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.1, bevelSegments: 6 });
+geo.center();
+const gold = new THREE.MeshStandardMaterial({ color: '#C9A45C', metalness: 0.95, roughness: 0.28 });
+const cross = new THREE.Mesh(geo, gold);
+const rig = new THREE.Group(); rig.add(cross); rig.position.y = 1.9; scene.add(rig);
+
+scene.add(new THREE.AmbientLight('#3a2d1c', 0.6));
+const key = new THREE.DirectionalLight('#ffe2b0', 4.5); key.position.set(4, 5, 6); scene.add(key);
+const rim = new THREE.DirectionalLight('#C9A45C', 4); rim.position.set(-5, 2, -4); scene.add(rim);
+const glow = new THREE.PointLight('#ffcf80', 0, 14); glow.position.set(0, 1.4, 5); scene.add(glow);
+
+// Dust: fixed seeded positions so every render matches.
+let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+const N = 900, pos = new Float32Array(N * 3);
+for (let i = 0; i < N; i++) { pos[i * 3] = (rnd() - 0.5) * 14; pos[i * 3 + 1] = (rnd() - 0.5) * 22; pos[i * 3 + 2] = (rnd() - 0.5) * 12 - 2; }
+const dustGeo = new THREE.BufferGeometry(); dustGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ color: '#C9A45C', size: 0.045, transparent: true, opacity: 0.55, depthWrite: false }));
+scene.add(dust);
+
+const st = { camZ: 17, camY: 3.2, spin: -1.1, tilt: 0.25, glow: 0, dust: 0 };
+function draw() {
+  camera.position.set(0, st.camY, st.camZ); camera.lookAt(0, 0.9, 0);
+  rig.rotation.set(st.tilt, st.spin, 0);
+  glow.intensity = st.glow;
+  dust.position.y = st.dust; dust.rotation.y = st.dust * 0.05;
+  renderer.render(scene, camera);
+}
+
+const tl = gsap.timeline({ paused: true, onUpdate: draw });
+// Camera pushes in on an ease while the cross turns to face us and settles; nothing stops dead.
+tl.to(st, { camZ: 15.5, camY: 1.8, duration: 6, ease: 'power2.inOut' }, 0);
+tl.to(st, { spin: 0.18, tilt: 0.04, duration: 4.2, ease: 'power3.out' }, 0);
+tl.to(st, { spin: 0.08, duration: 1.8, ease: 'sine.inOut' }, 4.2);
+tl.to(st, { glow: 5, duration: 1.2, ease: 'power2.out' }, 2.4);
+tl.to(st, { dust: 1.6, duration: 6, ease: 'none' }, 0);
+tl.from('#kicker', { opacity: 0, y: 18, duration: 0.6, ease: 'power2.out' }, 2.6);
+tl.from('#line', { opacity: 0, y: 30, duration: 0.7, ease: 'back.out(1.4)' }, 2.8);
+tl.to('#cross3d', { opacity: 0, duration: 1, ease: 'power1.in' }, 5);
+document.fonts.ready.then(draw);
+draw();
+window.__timelines = window.__timelines || {}; window.__timelines['cross3d'] = tl;
+</script></body></html>

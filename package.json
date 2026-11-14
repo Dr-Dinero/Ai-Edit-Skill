@@ -25,7 +25,9 @@
     "test:media": "node scripts/smoke-media.mjs",
     "validate:short-form": "node .claude/skills/short-form-edit/scripts/validate-plan.mjs",
     "validate:footage": "node .claude/skills/short-form-edit/scripts/validate-footage.mjs",
-    "preflight:all": "node scripts/preflight-all.mjs"
+    "preflight:all": "node scripts/preflight-all.mjs",
+    "gate": "python3 .claude/skills/edit-qc/scripts/first_pass_gate.py",
+    "deliver": "python3 scripts/deliver.py"
   },
   "engines": {
     "node": ">=22"

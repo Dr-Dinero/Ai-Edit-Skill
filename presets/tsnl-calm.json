@@ -1,0 +1,15 @@
+{
+  "name": "tsnl-calm",
+  "about": "TSNL teaching shorts. From the TSNL brand pack: no cut zooms, one slow push, calm fades, gold on warm white, 1 s hold then 1 s fade, never tighter than mid-torso, main cut under 90 s.",
+  "format": { "max_seconds": 90 },
+  "cuts": { "allow_punch": false },
+  "ending": { "mode": "hold", "hold_min": 0.9, "hold_max": 2.2 },
+  "look": { "palette": ["#F4EFE6", "#C9A45C"], "allow_grade": false },
+  "style": {
+    "caption_font": "Figtree ExtraBold", "title_font": "Libre Caslon Text", "motion": "calm",
+    "push": "one slow push, at most 0.25 %/s and +6 %",
+    "broll": "covers every jump cut; own Higgsfield clips first, then Storyblocks; no AI b-roll on Shorts",
+    "music": "Epidemic Sound bed 18 to 22 dB under the voice",
+    "hook": "hook in the first 1.5 s; no generic sky in the hook"
+  }
+}

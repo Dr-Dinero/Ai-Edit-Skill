@@ -18,7 +18,13 @@ encoded draft:
 python3 .claude/skills/edit-qc/scripts/craft_qc.py <render.mp4> --plan <name>.plan.json --voice cache/voice.wav --transcript <render>.scribe.json --out <job>/qc
 ```
 
-Any FAIL there is a FAIL here. Then, on the encoded draft:
+Then run the first-pass gate, which works on any render whichever tool made it:
+
+```sh
+npm run gate -- <render.mp4> --preset presets/<client>.json --expect <script>.txt --out <job>/qc
+```
+
+Any FAIL in either is a FAIL here; open only the frame strips they flag. Then, on the encoded draft:
 
 - **Craft floor:** the frame changes on every jump cut and at least every ~3.5 s in
   teaching; every shot moves; captions are big, word-timed 1-3 word chunks with an accent

@@ -1,0 +1,18 @@
+{
+  "name": "greenside-text-behind",
+  "about": "Greenside Systems reels, style A (text behind the speaker). Approved on reel 01 v4, 2026-11-13.",
+  "cuts": { "allow_punch": true, "min_punch": 0.06 },
+  "overlays": { "lead_max": 0.20, "late_max": 0.04, "zone": "centre" },
+  "ending": { "mode": "endcard", "hold_min": 0.8 },
+  "look": { "allow_grade": false },
+  "style": {
+    "title_font": "Anton", "caption_font": "Inter Tight ExtraBold", "accent_serif": "Instrument Serif",
+    "caption_y": 0.67, "motion": "punchy", "sfx_on_overlays": true,
+    "colours": { "loss": "#ff3b4f", "win": "#19f28b", "highlight": "#ffb320" },
+    "behind_text": "title sits high (top 150 to 450 px) so the head covers only its lower part",
+    "cta": "full-screen green GREENSIDE card covers the CTA; his face is never shown during the CTA",
+    "audio": "every piece levelled to -14 LUFS; CTA takes get highpass 110 Hz and a -2.5 dB low shelf at 220 Hz only; no match EQ, no denoise",
+    "lists": "a count (one, two, three) builds and stays up; it never drops and re-enters",
+    "never": ["colour grading the footage", "reusing one video's chart in another", "overlays at the top of the frame"]
+  }
+}

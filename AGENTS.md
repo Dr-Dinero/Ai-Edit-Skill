@@ -96,6 +96,11 @@ Check cropped faces, overflow, black flashes, readable labels, clipping, and A/V
 sync. Resolve problems before the final render. Save evidence in VERIFY.md.
 Use a Range-capable preview server for MP4 scrubbing (for example `npx serve`).
 
+Before anyone sees a render, run `npm run gate -- <render> --preset presets/<client>.json
+--expect <script>.txt`; a FAIL is fixed, not delivered. Hand off with `npm run deliver`. Client
+looks live in `presets/`, the owner's standing rules in `docs/OWNER-RULES.md`, the reasons in
+`docs/FIRST-PASS-RULES.md`. Read `docs/SCALE.md` before a batch and `docs/3D.md` before any 3D.
+
 Honor approvals already provided. When review approval is missing, prepare the
 concrete preview or cut proposal first. Never claim a lint result proves visual
 quality. Only publish or upload a finished video when the user authorizes it.

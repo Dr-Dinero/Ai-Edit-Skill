@@ -38,6 +38,13 @@ https://github.com/user-attachments/assets/733bc3f0-432f-41a0-b52d-107cd7f0c806
 
 https://github.com/user-attachments/assets/4ad48761-d14c-407a-9dec-1b76a9afb04a
 
+## Content council: upload a video, approve the post
+
+The council is a team of Claude role agents that edits, checks, and packages each
+video you drop in a Google Drive folder, shows its progress on a dashboard, and waits
+for your go before anything posts. Start with the plain-language
+[council setup guide](docs/COUNCIL-SETUP.md).
+
 ## What's included
 
 - **[Editing playbook](docs/EDITING-PLAYBOOK.md):** how Nate's videos get edited with AI, the measured house reel style, the B-roll, caption, and sound rules, and how every note becomes a rule in a skill.

@@ -1,4 +1,5 @@
 {
+  "video_format": "long",
   "platforms": ["youtube", "instagram"],
   "story": {
     "format": "talking head",

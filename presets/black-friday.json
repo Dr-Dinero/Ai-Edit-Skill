@@ -1,0 +1,14 @@
+{
+  "name": "black-friday",
+  "about": "Black Friday ads. Black backgrounds with red, white and yellow only. Red banner with white letters. Not Christmas-like.",
+  "cuts": { "allow_punch": true, "min_punch": 0.06 },
+  "overlays": { "lead_max": 0.20, "late_max": 0.04, "zone": "centre" },
+  "ending": { "mode": "endcard", "hold_min": 0.5 },
+  "look": { "banned_hues": [[70, 330]], "allow_grade": false },
+  "style": {
+    "banner": "red with white letters, large enough to read on a phone at arm's length; the whole logo stays inside the frame",
+    "animated_story": "once the animation starts it runs animation to animation; never cut back to the face",
+    "ending": "the end promo overlay arrives the moment speaking stops; never a frozen still frame",
+    "price": "prices come from the owner's latest message, never from an older version"
+  }
+}

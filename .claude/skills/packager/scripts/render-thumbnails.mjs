@@ -4,6 +4,7 @@
 // Usage: render-thumbnails.mjs <package.json> [--only 1,3] [--out <dir>] [--no-vertical]
 // Writes <n>-<angle>.png (1280x720), <n>-<angle>-vertical.png (1080x1920), phone-preview.png,
 // and records file, cover, and layout checks on each concept in package.json.
+// A package with "video_format": "short" (Shorts, Reels) gets vertical covers only.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
@@ -17,6 +18,12 @@ export const FORMATS = {
   wide: { w: 1280, h: 720, maxFont: 190, minFont: 84 },
   vertical: { w: 1080, h: 1920, maxFont: 230, minFont: 110 },
 };
+// Shorts and Reels show a vertical cover, so a wide thumbnail for them is wasted work.
+export function formatsFor(pkg, { noVertical = false } = {}) {
+  if (pkg.video_format === 'short') return ['vertical'];
+  return noVertical ? ['wide'] : ['wide', 'vertical'];
+}
+
 // YouTube draws the duration over the bottom-right corner of every thumbnail.
 export const BADGE = { x: 0.78, y: 0.8 };
 
@@ -30,8 +37,10 @@ export function plan(concept, format = 'wide') {
   const key = String(d.key_word || words.at(-1) || '').toUpperCase();
   if (format === 'vertical') {
     // A 16:9 still cannot fill 9:16 without cropping the face huge, so with a headline the frame
-    // sits at the bottom over a blurred copy of itself, leaving a clean band on top for the text.
-    return { style, split: false, zoom: 1, focus, target: [0.5, 0.42], side: 'top', box: { x: 0.07, y: 0.07, w: 0.86, h: 0.22 }, key, words, float: words.length ? 0.78 : 0 };
+    // sits low over a blurred copy of itself, leaving a clean band on top for the text. The band
+    // starts below the Reels header and inside the 3:4 profile-grid crop (y 240-1680), and the
+    // face is placed under it so the headline never sits on the hair (cover_qc checks all three).
+    return { style, split: false, zoom: 1, focus, target: [0.5, 0.56], side: 'top', box: { x: 0.07, y: 0.145, w: 0.86, h: 0.2 }, key, words, float: words.length ? 0.78 : 0 };
   }
   let side = d.text_side || (split ? 'bottom' : focus[0] < 0.5 ? 'right' : 'left');
   if (style === 'clean' && !d.text_side) side = 'top';
@@ -51,7 +60,8 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 export function buildHtml(concept, { format = 'wide', still, still2, font = FONT } = {}) {
   const f = FORMATS[format], p = plan(concept, format);
-  const grade = { warm: 'contrast(1.2) saturate(1.22) brightness(1.04) sepia(0.07)', cool: 'contrast(1.2) saturate(1.12) brightness(1.03) hue-rotate(-6deg)', neutral: 'contrast(1.17) saturate(1.16)' }[concept.design?.grade || 'warm'];
+  const lift = concept.design?.brightness ? ` brightness(${+concept.design.brightness})` : '';
+  const grade = { warm: 'contrast(1.2) saturate(1.22) brightness(1.04) sepia(0.07)', cool: 'contrast(1.2) saturate(1.12) brightness(1.03) hue-rotate(-6deg)', neutral: 'contrast(1.17) saturate(1.16)' }[concept.design?.grade || 'warm'] + lift;
   const dir = { right: 'to left', left: 'to right', bottom: 'to top', top: 'to bottom' }[p.side];
   const darken = concept.design?.darken ?? (p.style === 'clean' ? 0.5 : 0.88);
   const headline = p.words.map(w => w.toUpperCase() === p.key || w.toUpperCase().replace(/[^A-Z0-9$%]/g, '') === p.key.replace(/[^A-Z0-9$%]/g, '') ? `<span class="key">${esc(w)}</span>` : esc(w)).join(' ');
@@ -89,7 +99,7 @@ window.__layout = async () => {
     const sw = shot.clientWidth, iw = img.naturalWidth, ih = img.naturalHeight;
     const scale = Math.max(sw / iw, (float || 1) * H / ih) * zoom, fx = +shot.dataset.fx * iw * scale, fy = +shot.dataset.fy * ih * scale;
     const tx = document.querySelectorAll('.shot').length > 1 ? sw / 2 : target[0] * W;
-    const left = Math.min(0, Math.max(sw - iw * scale, tx - fx)), top = float ? H - ih * scale : Math.min(0, Math.max(H - ih * scale, target[1] * H - fy));
+    const left = Math.min(0, Math.max(sw - iw * scale, tx - fx)), top = float ? Math.min(0.4 * H, Math.max(H - ih * scale, target[1] * H - fy)) : Math.min(0, Math.max(H - ih * scale, target[1] * H - fy));
     img.style.width = iw * scale + 'px'; img.style.height = ih * scale + 'px'; img.style.left = left + 'px'; img.style.top = top + 'px';
   }
   const box = document.getElementById('text'), h1 = box.querySelector('h1');
@@ -119,10 +129,11 @@ async function main() {
   try {
     for (const [i, c] of (pkg.thumbnails || []).entries()) {
       if (only && !only.has(i + 1)) continue;
+      if (c.style === 'symbol') continue; // painted by paint_covers.py
       const still = c.still?.file && resolve(base, c.still.file), still2 = c.still2?.file && resolve(base, c.still2.file);
       if (!still || !existsSync(still)) { problems.push(`Thumbnail ${i + 1}: still.file is missing or not found; run pick-stills first.`); continue; }
       if (SPLIT.has(c.style) && still2 && !existsSync(still2)) { problems.push(`Thumbnail ${i + 1}: still2.file not found.`); continue; }
-      const formats = args.includes('--no-vertical') ? ['wide'] : ['wide', 'vertical'];
+      const formats = formatsFor(pkg, { noVertical: args.includes('--no-vertical') });
       c.layout = {};
       for (const format of formats) {
         const f = FORMATS[format], name = `${slugAngle(c, i)}${format === 'vertical' ? '-vertical' : ''}`;
@@ -140,13 +151,16 @@ async function main() {
         const rel = `${out.startsWith(base) ? out.slice(base.length + 1).replaceAll('\\', '/') : out}/${name}.png`;
         if (format === 'wide') c.file = rel; else c.cover = rel;
       }
+      if (!formats.includes('wide')) delete c.file;
       rendered.push({ i, c });
     }
     if (rendered.length) {
-      const cards = rendered.map(({ i, c }) => `<figure><img src="${pathToFileURL(join(out, `${slugAngle(c, i)}.png`)).href}"><figcaption>${i + 1}. ${esc(c.angle || '')}: ${esc(c.pairs_with || '')}</figcaption></figure>`).join('');
-      const sheet = join(out, '.phone-preview.html');
-      writeFileSync(sheet, `<!doctype html><meta charset="utf-8"><style>body{margin:0;padding:16px;background:#0f0f0f;font:13px/1.3 Inter,Arial,sans-serif;color:#f1f1f1;display:flex;flex-wrap:wrap;gap:16px;width:${2 * 320 + 48}px}figure{width:320px;margin:0}img{width:320px;height:180px;border-radius:8px;display:block}figcaption{margin-top:6px;color:#aaa}</style>${cards}`);
-      const page = await browser.newPage({ viewport: { width: 2 * 320 + 48, height: 200 } });
+      // Preview what the feed shows: wide thumbnails, or vertical covers for a short.
+      const short = pkg.video_format === 'short', [cw, ch, cols] = short ? [180, 320, 4] : [320, 180, 2];
+      const cards = rendered.map(({ i, c }) => `<figure><img src="${pathToFileURL(join(out, `${slugAngle(c, i)}${short ? '-vertical' : ''}.png`)).href}"><figcaption>${i + 1}. ${esc(c.angle || '')}: ${esc(c.pairs_with || '')}</figcaption></figure>`).join('');
+      const sheet = join(out, '.phone-preview.html'), width = cols * cw + (cols + 1) * 16;
+      writeFileSync(sheet, `<!doctype html><meta charset="utf-8"><style>body{margin:0;padding:16px;background:#0f0f0f;font:13px/1.3 Inter,Arial,sans-serif;color:#f1f1f1;display:flex;flex-wrap:wrap;gap:16px;width:${width - 32}px}figure{width:${cw}px;margin:0}img{width:${cw}px;height:${ch}px;border-radius:8px;display:block;object-fit:cover}figcaption{margin-top:6px;color:#aaa}</style>${cards}`);
+      const page = await browser.newPage({ viewport: { width, height: 200 } });
       await page.goto(pathToFileURL(sheet).href);
       await page.waitForLoadState('load');
       await page.screenshot({ path: join(out, 'phone-preview.png'), fullPage: true });

@@ -73,7 +73,7 @@ function move(job, to, by, note) {
   if (!NEXT[job.stage].includes(to)) die(`${job.stage} cannot hand off to ${to}. Allowed: ${NEXT[job.stage].join(', ') || 'none'}.`);
   const loops = job.history.filter(h => h.from === job.stage && h.to === to).length + 1;
   job.history.push({ at: now(), from: job.stage, to, by, note: note || '' });
-  job.stage = to; job.holder = HOLDER[to];
+  job.stage = to; job.holder = HOLDER[to]; job.step = null;
   if (NEXT[to].includes(job.history.at(-1).from) && loops > MAX_LOOPS) job.needsOwner = `${loops} round trips between ${job.history.at(-1).from} and ${to}`;
 }
 
@@ -122,7 +122,7 @@ function board() {
   rows.sort((a, b) => b.updated.localeCompare(a.updated));
   for (const j of rows) {
     const last = j.history.at(-1);
-    console.log(`${j.slug.padEnd(28)} ${j.stage.padEnd(13)} ${j.holder.padEnd(18)} ${j.updated.slice(0, 16)}${j.needsOwner ? '  NEEDS OWNER: ' + j.needsOwner : ''}${last?.note ? '  ' + last.note : ''}`);
+    console.log(`${j.slug.padEnd(28)} ${j.stage.padEnd(13)} ${j.holder.padEnd(18)} ${j.updated.slice(0, 16)}${j.needsOwner ? '  NEEDS OWNER: ' + j.needsOwner : ''}${j.step ? '  NOW: ' + j.step.text : last?.note ? '  ' + last.note : ''}`);
   }
 }
 
@@ -131,6 +131,15 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (cmd === 'new') create(slug);
   else if (cmd === 'board') board();
   else if (cmd === 'status') console.log(JSON.stringify(load(slug), null, 2));
+  else if (cmd === 'progress') {
+    // What the holder is doing inside its stage, so the dashboard shows motion between handoffs.
+    const job = load(slug), text = opt('step'), pct = opt('pct');
+    if (!text) die('Usage: council progress <slug> --step "<what is happening now>" [--pct 0-100]');
+    if (pct != null && !(Number(pct) >= 0 && Number(pct) <= 100)) die('--pct must be a number from 0 to 100.');
+    job.step = { text, pct: pct == null ? null : Number(pct), at: now() };
+    save(job);
+    console.log(JSON.stringify({ slug, stage: job.stage, step: job.step }));
+  }
   else if (cmd === 'due') {
     // Work waiting on a role right now: analyst reads that are due, and jobs parked at a stage.
     const jobs = existsSync(jobsRoot) ? readdirSync(jobsRoot).filter(s => existsSync(jobFile(s))).map(s => JSON.parse(readFileSync(jobFile(s), 'utf8'))) : [];
@@ -164,5 +173,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       move(job, 'scheduled', 'owner', `approved: "${quote}"`); save(job);
       console.log(`${slug}: approved. The packager may schedule it now.`);
     }
-  } else die('Usage: council <new|board|status|due|handoff|approve> ... (see .claude/skills/council/SKILL.md)');
+  } else die('Usage: council <new|board|status|progress|due|handoff|approve> ... (see .claude/skills/council/SKILL.md)');
 }

@@ -21,7 +21,7 @@ footage -> virality-director -> editor -> edit-qc -> packager -> packaging-qc ->
 | edit | editor | `council-editor` | edit/NOTES.md names the draft render |
 | edit-qc | edit-qc | `edit-qc` | qc/edit-qc.md says PASS (on to package) or FAIL (back to edit) |
 | package | packager | `packager` | package/package.json exists |
-| packaging-qc | packaging-qc | `packaging-qc` | qc/packaging-qc.md says PASS and check-package is clean, or FAIL back |
+| packaging-qc | packaging-qc | `packaging-qc` | qc/packaging-qc.md says PASS, check-package is clean and cover QC passes, or FAIL back |
 | approval | owner | this skill | the owner's own words are recorded with `approve` |
 | scheduled | packager | `packager` | the post is live; `--post` records its URL or id |
 | posted | analyst | `analyst` | 1 h, 24 h, and 7 d reads are in analytics/ |
@@ -36,6 +36,7 @@ video project (override with `--root` or `COUNCIL_ROOT`).
 npm run council -- new <slug> --footage <path> [--platforms youtube,instagram] [--autopost "<owner's words>"]
 npm run council -- board                       # every job, newest first
 npm run council -- status <slug>               # full job.json
+npm run council -- progress <slug> --step "<what is happening now>" [--pct 0-100]
 npm run council -- due                         # JSON of what each role owes right now
 npm run council -- handoff <slug> --to <stage> --by <role> --note "<one line>"
 npm run council -- approve <slug> --quote "<owner's exact words>"
@@ -72,11 +73,13 @@ changes, run `approve --changes` and send it back to the role that owns the chan
 
 ## Running on its own
 
-Two scheduled routines make the council autonomous. Each starts a fresh session in this
-repo, so keep jobs where every run can see them: set `COUNCIL_ROOT` to a shared, durable
+Run intake when the owner asks, not on a timer. A scheduled check that finds nothing still
+costs a full run, every time; an hourly intake that is skipped all day is pure waste. Set a
+schedule only when the owner asks for one, and prefer "when a new file lands" or a daily time
+over hourly. Keep jobs where every run can see them: set `COUNCIL_ROOT` to a shared, durable
 folder (in a cloud project, the project's shared files) instead of `video-projects/`.
 
-- **Intake** (every 15-30 minutes): list the owner's upload folder (for example a Google
+- **Intake** (on request): list the owner's upload folder (for example a Google
   Drive folder named "Council Inbox"). For each video not yet in `INTAKE.json` beside
   the jobs, download it, run `council new <slug> --footage <file>`, and record the file
   id, name, and slug in `INTAKE.json`. Never delete or move the owner's originals.
@@ -84,10 +87,20 @@ folder (in a cloud project, the project's shared files) instead of `video-projec
   `NODE_USE_ENV_PROXY=1 npm run fetch-drive -- <file-id> <out> --bytes <size>`, which needs
   the folder shared as "Anyone with the link: Viewer" and `drive.usercontent.google.com`
   allowed in the environment's network settings.
-- **Worker** (hourly): run `council due`. For each entry, load that role's skill and do
+- **Progress**: the owner watches the dashboard, so every role records what it is
+  doing inside its stage with `council progress` (and on the dashboard board) at each
+  step, not only at handoffs. A handoff clears the step. Cover previews reach the
+  dashboard only through `npm run board-covers`, never baked into the page.
+  [docs/COUNCIL-SETUP.md](../../../docs/COUNCIL-SETUP.md) and
+  [docs/council/hourly-run.md](../../../docs/council/hourly-run.md) are the setup guide and
+  the run prompt (run it on request).
+- **Worker** (on request, or after intake): run `council due`. For each entry, load that role's skill and do
   the work: analyst reads that are due, and any job parked at a role's stage. A job at
   `approval`, or flagged NEEDS OWNER, gets one message to the owner with the preview
   and nothing more until they answer. The worker never records an approval.
+
+Every render clears `npm run gate` with the client's preset before edit QC, and is handed off
+with `npm run deliver`. See `docs/OWNER-RULES.md`.
 
 ## Splitting into threads
 

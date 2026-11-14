@@ -17,8 +17,10 @@ cpSync(join(root, 'examples/starter'), dest, { recursive: true, errorOnExist: tr
 mkdirSync(join(dest, 'assets'), { recursive: true });
 mkdirSync(join(dest, 'compositions'), { recursive: true });
 mkdirSync(join(dest, 'renders'), { recursive: true });
+for (const dir of ['source', 'transcripts', 'broll', 'music', 'qa']) mkdirSync(join(dest, dir), { recursive: true });
+copyFileSync(join(root, 'BRAND.md'), join(dest, 'BRAND.md'));
 copyFileSync(gsap, join(dest, 'assets/gsap.min.js'));
 const meta = JSON.parse(readFileSync(join(dest, 'meta.json'), 'utf8'));
 meta.name = slug;
 writeFileSync(join(dest, 'meta.json'), JSON.stringify(meta, null, 2) + '\n');
-console.log(`Created video-projects/${slug}. Run HyperFrames from that folder.`);
+console.log(`Created video-projects/${slug}. Put the raw recording in source/, fill BRAND.md (or keep the calm defaults), and run HyperFrames from that folder.`);

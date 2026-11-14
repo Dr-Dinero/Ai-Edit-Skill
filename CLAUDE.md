@@ -101,6 +101,11 @@ Before anyone sees a render, run `npm run gate -- <render> --preset presets/<cli
 looks live in `presets/`, the owner's standing rules in `docs/OWNER-RULES.md`, the reasons in
 `docs/FIRST-PASS-RULES.md`. Read `docs/SCALE.md` before a batch and `docs/3D.md` before any 3D.
 
+The editing tools here are a copy of the engine, Free-Editor (`engine.json`, `engine.lock`,
+`docs/ONE-ENGINE.md`). Fix a tool in Free-Editor, merge it, then run `npm run engine:sync --
+<Free-Editor checkout>`; `npm run engine:check` fails when an engine file was edited here. This
+repository owns the client presets, owner rules, council, packaging and posting.
+
 Honor approvals already provided. When review approval is missing, prepare the
 concrete preview or cut proposal first. Never claim a lint result proves visual
 quality. Only publish or upload a finished video when the user authorizes it.
